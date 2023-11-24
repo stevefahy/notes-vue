@@ -1,0 +1,153 @@
+input {
+  font-size: 0.8rem !important;
+  border-style: inset !important;
+  background-color: field;
+  margin: 0em;
+  padding: 1px 2px;
+  border-width: 1px;
+  border-style: inset !important;
+  border-color: -internal-light-dark(rgb(118, 118, 118), rgb(133, 133, 133)) !important;
+}
+
+.v-card--variant-elevated {
+  box-shadow:
+    #0003 0 3px 3px -2px,
+    #00000024 0 3px 4px,
+    #0000001f 0 1px 8px !important;
+}
+
+.v-card {
+  padding-top: 16px !important;
+  padding-bottom: 16px !important;
+}
+
+.v-btn {
+  text-transform: unset !important;
+}
+
+.v-btn.contained:hover {
+  text-decoration: none;
+  background-color: #7d0000 !important;
+}
+
+$color-primary: #4d0000;
+$color-secondary: #b30000;
+
+.basic {
+  color: $color-secondary !important;
+}
+
+// Large
+
+.large {
+  font-size: 1.1rem !important;
+  font-weight: 500 !important;
+  line-height: 1.75 !important;
+  letter-spacing: 0.02857em !important;
+}
+
+.v-btn--variant-elevated {
+  box-shadow:
+    #0003 0 3px 5px -1px,
+    #00000024 0 6px 10px,
+    #0000001f 0 1px 18px !important;
+}
+
+.v-list-item__prepend > .v-badge ~ .v-list-item__spacer,
+.v-list-item__prepend > .v-icon ~ .v-list-item__spacer,
+.v-list-item__prepend > .v-tooltip ~ .v-list-item__spacer {
+  width: 10px !important;
+}
+
+.v-theme--myCustomLightTheme {
+  --v-hover-opacity: 0.07 !important;
+}
+
+.material-icons {
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 700,
+    'GRAD' 0,
+    'opsz' 48;
+  color: #0000008a;
+}
+
+.v-skeleton-loader__list-item {
+  margin: 2px !important;
+}
+
+.white {
+  color: #fff;
+}
+
+.button_icon {
+  margin-right: 8px;
+}
+
+.icon_text {
+  display: flex;
+  align-items: center;
+}
+
+.dialogue-title {
+  font-family: Roboto, Helvetica, Arial, sans-serif !important;
+  font-size: 1.25rem !important;
+  line-height: 1.6 !important;
+  letter-spacing: 0.0075em !important;
+}
+
+notebooklistitem {
+  width: 100%;
+}
+
+input,
+select,
+textarea {
+  background-color: #f7f0fa !important;
+  border-style: inset !important;
+}
+
+input {
+  font-size: 1rem !important;
+}
+
+select {
+  -moz-appearance: auto !important;
+  -webkit-appearance: auto !important;
+}
+
+.v-overlay__scrim {
+  opacity: 0.5 !important;
+}
+
+.notebooks_list:last-child {
+  padding-bottom: 15px;
+}
+
+.v-overlay__content.v-snackbar__wrapper.v-theme--myCustomLightTheme.v-snackbar--variant-elevated {
+  bottom: 60px !important;
+}
+
+.v-snackbar__content {
+  background-color: var(--color-success) !important;
+}
+
+.edit_icon_small .v-btn__content {
+  font-size: 0.8rem;
+}
+
+.v-btn--block {
+  display: flex;
+  flex: 0 0 auto !important;
+  min-width: unset !important;
+}
+
+.v-snackbar__wrapper {
+  width: 50%;
+  min-width: 150px !important;
+}
+
+.v-card--variant-elevated,
+.v-card--variant-flat {
+  color: inherit !important;
+}
