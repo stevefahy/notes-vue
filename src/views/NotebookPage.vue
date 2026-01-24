@@ -61,7 +61,7 @@ const enableEditNotebook = ref(false)
 const editNotes = ref(false)
 const clearEditNotes = ref(false)
 
-let loadingTimer: NodeJS.Timeout
+let loadingTimer: ReturnType<typeof setTimeout>
 
 const init = () => {
   if (notesLoadedDelay.value) {
@@ -427,40 +427,22 @@ getAuth()
   <div class="page_scrollable_header_breadcrumb_footer_list">
     <template v-if="notebookLoaded && notesLoaded && notebook && notes">
       <template v-if="notesLoaded && notebook && notes !== null">
-        <NoteList
-          :notes="notes"
-          :onNotesSelected="updateSelected"
-          :onNotesEdit="editNotes"
-          :onClearNotesEdit="clearEditNotes"
-        />
+        <NoteList :notes="notes" :onNotesSelected="updateSelected" :onNotesEdit="editNotes"
+          :onClearNotesEdit="clearEditNotes" />
       </template>
       <template v-if="moveNote && userNotebooks">
-        <SelectNotebookForm
-          :notebooks="userNotebooks"
-          :moveNotes="moveNoteHandler"
-          :onCancel="cancelHandler"
-        />
+        <SelectNotebookForm :notebooks="userNotebooks" :moveNotes="moveNoteHandler" :onCancel="cancelHandler" />
       </template>
       <template v-if="enableEditNotebook">
-        <AddNotebookForm
-          method="edit"
-          :notebook="notebook"
-          :editNotebook="editNotebookHandler"
-          :onCancel="cancelEditHandler"
-        />
+        <AddNotebookForm method="edit" :notebook="notebook" :editNotebook="editNotebookHandler"
+          :onCancel="cancelEditHandler" />
       </template>
     </template>
   </div>
   <FooterView>
     <template v-if="notebookLoaded && notesLoaded && !editNotes">
-      <v-btn
-        :size="btnSize"
-        rounded="xl"
-        color="secondary"
-        aria-label="Add note button"
-        class="contained medium breadcrumb_edit_fab button_fab"
-        @click="addNoteFormHandler"
-      >
+      <v-btn :size="btnSize" rounded="xl" color="secondary" aria-label="Add note button"
+        class="contained medium breadcrumb_edit_fab button_fab" @click="addNoteFormHandler">
         <span class="icon_text">
           <span class="material-symbols-outlined button_icon white"> note_add </span>
           Add Note
@@ -468,14 +450,8 @@ getAuth()
       </v-btn>
     </template>
     <template v-if="notebookLoaded && notesLoaded && !editNotes && notes && notes!.length > 0">
-      <v-btn
-        :size="btnSize"
-        rounded="xl"
-        color="secondary"
-        aria-label="Edit Notes button"
-        class="contained medium breadcrumb_edit_fab button_fab"
-        @click="editNoteFormHandler"
-      >
+      <v-btn :size="btnSize" rounded="xl" color="secondary" aria-label="Edit Notes button"
+        class="contained medium breadcrumb_edit_fab button_fab" @click="editNoteFormHandler">
         <span class="icon_text">
           <span class="material-symbols-outlined button_icon white"> edit </span>
           Edit Notes
@@ -484,47 +460,27 @@ getAuth()
     </template>
 
     <template v-if="notebookLoaded && notesLoaded && notes && notes!.length < 1">
-      <v-btn
-        :size="btnSize"
-        rounded="xl"
-        color="secondary"
-        aria-label="Delete Notebook button"
-        class="contained medium breadcrumb_edit_fab button_fab"
-        @click="deleteNotebookHandler"
-      >
+      <v-btn :size="btnSize" rounded="xl" color="secondary" aria-label="Delete Notebook button"
+        class="contained medium breadcrumb_edit_fab button_fab" @click="deleteNotebookHandler">
         <span class="icon_text">
           <span class="material-symbols-outlined button_icon white"> delete </span>
           Delete Notebook
         </span>
       </v-btn>
     </template>
-    <template
-      v-if="
-        notebookLoaded && notesLoaded && editNotes && isSelected && isSelected!.selected.length > 0
-      "
-    >
-      <v-btn
-        rounded="xl"
-        :size="btnSize"
-        color="secondary"
-        aria-label="Delete Note button"
-        class="contained medium breadcrumb_edit_fab button_fab"
-        @click="deleteNoteHandler"
-      >
+    <template v-if="
+      notebookLoaded && notesLoaded && editNotes && isSelected && isSelected!.selected.length > 0
+    ">
+      <v-btn rounded="xl" :size="btnSize" color="secondary" aria-label="Delete Note button"
+        class="contained medium breadcrumb_edit_fab button_fab" @click="deleteNoteHandler">
         <span class="icon_text">
           <span class="material-symbols-outlined button_icon white"> delete </span>
           Delete
         </span>
       </v-btn>
       <template v-if="userNotebooks && userNotebooks!.length > 1">
-        <v-btn
-          :size="btnSize"
-          rounded="xl"
-          color="secondary"
-          aria-label="Move Note button"
-          class="contained medium breadcrumb_edit_fab button_fab"
-          @click="moveNoteFormHandler"
-        >
+        <v-btn :size="btnSize" rounded="xl" color="secondary" aria-label="Move Note button"
+          class="contained medium breadcrumb_edit_fab button_fab" @click="moveNoteFormHandler">
           <span class="icon_text">
             <span class="material-symbols-outlined button_icon white symbol_size">
               flip_to_front
@@ -535,14 +491,8 @@ getAuth()
       </template>
     </template>
     <template v-if="notebookLoaded && notesLoaded && editNotes">
-      <v-btn
-        :size="btnSize"
-        rounded="xl"
-        color="secondary"
-        aria-label="Cancel Note button"
-        class="contained medium breadcrumb_edit_fab button_fab"
-        @click="cancelEditNoteFormHandler"
-      >
+      <v-btn :size="btnSize" rounded="xl" color="secondary" aria-label="Cancel Note button"
+        class="contained medium breadcrumb_edit_fab button_fab" @click="cancelEditNoteFormHandler">
         <span class="icon_text">
           <span class="material-symbols-outlined button_icon white"> cancel </span>
           Cancel

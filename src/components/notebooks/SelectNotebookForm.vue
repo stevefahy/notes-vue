@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { SelectNotebookFormProps, Notebook, AlertInterface } from '@/core/model/global'
 import { useMobileSizeStore } from '@/stores/mobileSize'
@@ -12,7 +12,7 @@ const props = defineProps<SelectNotebookFormProps>()
 
 const route = useRoute()
 
-const dialog = true
+const dialog = ref(true)
 const notebookId = route.params.notebookId
 
 const selectedNotebook = ref<string>('')
@@ -57,6 +57,7 @@ const cancelHandler = (event: Event) => {
   if (error.value.error_state) {
     resetError()
   }
+  dialog.value = false
   props.onCancel()
 }
 
@@ -72,6 +73,7 @@ const submitHandler = async (event: Event) => {
     return
   }
   props.moveNotes(selectedNotebook.value)
+  dialog.value = false
   props.onCancel()
 }
 
@@ -84,14 +86,13 @@ const resetError = () => {
   }
 }
 
-const handleChange = (event: Event) => {
-  selectedNotebook.value = (event.target as HTMLSelectElement).value
-  if ((event.target as HTMLSelectElement).value === 'default') {
+watch(selectedNotebook, (newValue) => {
+  if (newValue === '' || newValue === 'default') {
     formIsValid.value = false
   } else {
     formIsValid.value = true
   }
-}
+})
 
 if (props.notebooks) {
   let sorted = sortNotes(props.notebooks)
@@ -107,13 +108,8 @@ if (props.notebooks) {
           <h2 class="dialogue-title">Move to Notebook</h2>
           <form class="form">
             <div class="control">
-              <label htmlFor="new-notebook-cover">Name</label>
-              <select
-                name="notebooks"
-                id="notebooks"
-                v-model="selectedNotebook"
-                @change="handleChange($event)"
-              >
+              <label for="new-notebook-cover">Name</label>
+              <select name="notebooks" id="notebooks" v-model="selectedNotebook">
                 <option disabled value="">Select a notebook...</option>
                 <template v-for="notebook of notebooksSorted">
                   <template v-if="notebook._id !== notebookId">
@@ -128,25 +124,14 @@ if (props.notebooks) {
           <div class="button_row">
             <div class="action">
               <div class="move">
-                <v-btn
-                  :size="btnSize"
-                  :disabled="!formIsValid"
-                  color="secondary"
-                  aria-label="Move Note button"
-                  class="contained medium"
-                  @click="submitHandler($event)"
-                >
+                <v-btn :size="btnSize" :disabled="!formIsValid" color="secondary" aria-label="Move Note button"
+                  class="contained medium" @click="submitHandler($event)">
                   Move Note
                 </v-btn>
               </div>
               <div class="cancel">
-                <v-btn
-                  :size="btnSize"
-                  color="secondary"
-                  aria-label="Cancel button"
-                  class="contained medium"
-                  @click="cancelHandler($event)"
-                >
+                <v-btn :size="btnSize" color="secondary" aria-label="Cancel button" class="contained medium"
+                  @click="cancelHandler($event)">
                   <span class="icon_text">
                     <span class="material-symbols-outlined button_icon white"> cancel </span>
                     Cancel
@@ -156,11 +141,8 @@ if (props.notebooks) {
             </div>
           </div>
           <template v-if="error.error_state">
-            <ErrorAlert
-              :error_severity="error.error_severity"
-              :error_state="error.error_state"
-              :message="error.message"
-            />
+            <ErrorAlert :error_severity="error.error_severity" :error_state="error.error_state"
+              :message="error.message" />
           </template>
         </div>
       </v-card-text>

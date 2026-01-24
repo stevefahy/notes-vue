@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch, computed } from 'vue'  // ← Added watch and computed
 import { FolderOptions } from '@/core/lib/folder-options'
 import APPLICATION_CONSTANTS from '@/core/application-constants/application-constants'
 import type {
@@ -23,60 +23,26 @@ const error = ref<AlertInterface>({ error_state: false, message: '' })
 const selectedCover = ref<NotebookCoverType>('default')
 const selectedName = ref<string>('')
 const formChanged = ref<boolean>(false)
+const dialog = ref(true)
 
-let notebookName: string = ''
-let notebookCover: NotebookCoverType = 'default'
-let originalName: string = ''
-let originalCover: NotebookCoverType = 'default'
 const folderOptions: FolderOptionsInterface[] = FolderOptions
 
+// Compute original values for comparison (reactive)
+const originalName = computed(() =>
+  props.method === 'edit' && props.notebook
+    ? props.notebook.notebook_name
+    : ''
+)
+const originalCover = computed(() =>
+  props.method === 'edit' && props.notebook
+    ? props.notebook.notebook_cover
+    : 'default'
+)
+
+// Initialize from props
 if (props.method === 'edit' && props.notebook) {
-  originalName = notebookName = props.notebook.notebook_name
-  originalCover = notebookCover = props.notebook.notebook_cover
-} else {
-  originalName = notebookName
-  originalCover = notebookCover
-}
-selectedCover.value = originalCover
-selectedName.value = originalName
-
-const getValue = (event: Event): string => {
-  return (event.target as HTMLInputElement).value
-}
-
-const getValueAsNotebookCoverType = (event: Event) => {
-  return (event.target as HTMLInputElement).value as NotebookCoverType
-}
-
-const checkForm = () => {
-  if (!formChanged.value) {
-    return true
-  } else {
-    return false
-  }
-}
-
-const nameChangeHandler = (name: string) => {
-  resetError()
-  selectedName.value = name
-  if (name !== originalName || selectedCover.value !== originalCover) {
-    if (!selectedName.value || selectedName.value.length < AC.NOTEBOOK_NAME_MIN) {
-      formChanged.value = false
-      return
-    } else {
-      formChanged.value = true
-    }
-    if (selectedName.value.length > AC.NOTEBOOK_NAME_MAX) {
-      formChanged.value = false
-      error.value = {
-        error_state: true,
-        message: `${AC.NOTEBOOK_NAME_MAX_ERROR}`
-      }
-      return
-    }
-  } else {
-    formChanged.value = false
-  }
+  selectedName.value = props.notebook.notebook_name
+  selectedCover.value = props.notebook.notebook_cover
 }
 
 const resetError = () => {
@@ -87,22 +53,49 @@ const resetError = () => {
   }
 }
 
-const coverChangeHandler = (cover: NotebookCoverType) => {
-  selectedCover.value = cover
+// Watch for name changes and validate
+watch(selectedName, (name) => {
+  resetError()
+  if (name !== originalName.value || selectedCover.value !== originalCover.value) {
+    if (!name || name.length < AC.NOTEBOOK_NAME_MIN) {
+      formChanged.value = false
+      return
+    }
+    if (name.length > AC.NOTEBOOK_NAME_MAX) {
+      formChanged.value = false
+      error.value = {
+        error_state: true,
+        message: `${AC.NOTEBOOK_NAME_MAX_ERROR}`
+      }
+      return
+    }
+    formChanged.value = true
+  } else {
+    formChanged.value = false
+  }
+})
+
+// Watch for cover changes
+watch(selectedCover, (cover) => {
   if (
-    selectedName.value !== originalName ||
-    (selectedName.value !== '' && cover !== originalCover)
+    selectedName.value !== originalName.value ||
+    (selectedName.value !== '' && cover !== originalCover.value)
   ) {
     formChanged.value = true
   } else {
     formChanged.value = false
   }
+})
+
+const checkForm = () => {
+  return !formChanged.value
 }
 
 const cancelHandler = (event: Event) => {
   event.preventDefault()
   event.stopPropagation()
   error.value = { error_state: false, message: '' }
+  dialog.value = false
   props.onCancel()
 }
 
@@ -110,6 +103,7 @@ const submitHandler = async (event: Event) => {
   event.preventDefault()
   event.stopPropagation()
   error.value = { error_state: false, message: '' }
+
   if (!selectedName.value || selectedName.value.length < AC.NOTEBOOK_NAME_MIN) {
     error.value = {
       error_state: true,
@@ -128,6 +122,7 @@ const submitHandler = async (event: Event) => {
     error.value = { error_state: true, message: AC.NOTEBOOK_COVER_EMPTY }
     return
   }
+
   const notebook_name = selectedName.value
   if (props.method === 'edit' && props.notebook && props.editNotebook) {
     const notebookId = props.notebook._id
@@ -136,13 +131,14 @@ const submitHandler = async (event: Event) => {
       updated = props.notebook.updatedAt
     }
     props.editNotebook(notebookId, notebook_name, selectedCover.value, updated)
+    dialog.value = false
     props.onCancel()
   } else if (props.method === 'create' && props.addNotebook) {
     props.addNotebook(notebook_name, selectedCover.value)
+    dialog.value = false
     props.onCancel()
   }
 }
-const dialog = true
 </script>
 
 <template>
@@ -156,68 +152,36 @@ const dialog = true
           <div>
             <form class="form">
               <div class="control">
-                <label htmlFor="new-notebook">Name</label>
-                <input
-                  type="text"
-                  id="new-notebook"
-                  :defaultValue="notebookName"
-                  @input="nameChangeHandler(getValue($event))"
-                />
+                <label for="new-notebook">Name</label>
+                <input type="text" id="new-notebook" v-model="selectedName" />
               </div>
               <div class="control">
-                <label htmlFor="new-notebook-cover">Cover</label>
-                <select
-                  name="cars"
-                  class="select_dialogue"
-                  id="new-notebook-cover"
-                  @change="coverChangeHandler(getValueAsNotebookCoverType($event))"
-                >
-                  <option
-                    v-for="folder of folderOptions"
-                    :key="folder.value"
-                    :value="folder.value"
-                    :selected="folder.value === notebookCover"
-                  >
+                <label for="new-notebook-cover">Cover</label>
+                <select name="cars" class="select_dialogue" id="new-notebook-cover" v-model="selectedCover">
+                  <option v-for="folder of folderOptions" :key="folder.value" :value="folder.value">
                     {{ folder.viewValue }}
                   </option>
                 </select>
               </div>
             </form>
             <div class="button_row">
-              <div class="checkForm() ? action_disabled : action">
+              <div :class="checkForm() ? 'action_disabled' : 'action'">
                 <div v-if="method === 'create'">
-                  <v-btn
-                    :size="btnSize"
-                    color="secondary"
-                    aria-label="Add notebook button"
-                    class="contained medium"
-                    :disabled="checkForm()"
-                    @click="submitHandler($event)"
-                  >
+                  <v-btn :size="btnSize" color="secondary" aria-label="Add notebook button" class="contained medium"
+                    :disabled="checkForm()" @click="submitHandler($event)">
                     Add
                   </v-btn>
                 </div>
                 <div v-if="method === 'edit'">
-                  <v-btn
-                    :size="btnSize"
-                    color="secondary"
-                    aria-label="Edit notebook button"
-                    class="contained medium"
-                    :disabled="checkForm()"
-                    @click="submitHandler($event)"
-                  >
+                  <v-btn :size="btnSize" color="secondary" aria-label="Edit notebook button" class="contained medium"
+                    :disabled="checkForm()" @click="submitHandler($event)">
                     Confirm
                   </v-btn>
                 </div>
               </div>
               <div>
-                <v-btn
-                  :size="btnSize"
-                  color="secondary"
-                  aria-label="Edit notebook button"
-                  class="contained medium"
-                  @click="cancelHandler($event)"
-                >
+                <v-btn :size="btnSize" color="secondary" aria-label="Cancel button" class="contained medium"
+                  @click="cancelHandler($event)">
                   <span class="icon_text">
                     <span class="material-symbols-outlined button_icon white"> cancel </span>
                     Cancel
@@ -226,11 +190,8 @@ const dialog = true
               </div>
             </div>
             <template v-if="error.error_state">
-              <ErrorAlert
-                :error_severity="error.error_severity"
-                :error_state="error.error_state"
-                :message="error.message"
-              />
+              <ErrorAlert :error_severity="error.error_severity" :error_state="error.error_state"
+                :message="error.message" />
             </template>
           </div>
         </div>

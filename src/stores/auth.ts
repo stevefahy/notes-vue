@@ -13,7 +13,7 @@ export const useAuthStore = defineStore('auth', () => {
   const router = useRouter()
   const notificationStore = useNotificationStore()
 
-  let interval: NodeJS.Timeout
+  let interval: ReturnType<typeof setInterval>
   const AutoRefreshToken = () => {
     interval = setInterval(() => {
       if (!authContext.value.success) {

@@ -1,23 +1,42 @@
-import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import vuetify from 'vite-plugin-vuetify'
+import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
+import { fileURLToPath, URL } from 'node:url'
 
-// https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [vue(), vuetify()],
+  plugins: [
+    vue({
+      template: { transformAssetUrls }
+    }),
+    vuetify({ autoImport: true }),
+  ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
-    }
+    },
+    extensions: ['.js', '.json', '.jsx', '.mjs', '.ts', '.tsx', '.vue'],
   },
+  optimizeDeps: {
+    include: ['vue', 'vuetify'],
+  },
+  // Add build optimizations
   build: {
     rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress eval warnings from gray-matter
+        if (
+          warning.code === 'EVAL' &&
+          warning.id?.includes('gray-matter')
+        ) {
+          return
+        }
+        // Use default warning handler for all other warnings
+        warn(warning)
+      },
       output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            return id.toString().split('node_modules/')[1].split('/')[0].toString()
-          }
+        manualChunks: {
+          'vue-vendor': ['vue', 'vue-router', 'pinia'],
+          'vuetify-vendor': ['vuetify'],
         }
       }
     }

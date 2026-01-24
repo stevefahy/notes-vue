@@ -5,10 +5,9 @@ import { Buffer } from 'buffer'
 import type { NoteEditorView } from '@/core/model/global'
 import ViewNoteMarkdown from './ViewNoteMarkdown.vue'
 
-globalThis.Buffer = Buffer
+  ; (globalThis as any).Buffer = Buffer
 
 const props = defineProps<NoteEditorView>()
-let updatedViewText: (updatedEdit: string) => void
 
 let content: string
 const contextView = ref<string>('')
@@ -18,7 +17,7 @@ const viewText = toRef(props, 'viewText')
 const splitScreen = toRef(props, 'splitScreen')
 const visible = toRef(props, 'visible')
 
-let loadedTimer: NodeJS.Timeout
+let loadedTimer: ReturnType<typeof setTimeout>
 const hideSkeleton = () => {
   loadedTimer = setTimeout(() => {
     isLoaded.value = true
@@ -37,21 +36,18 @@ watch(
 )
 
 const updateViewText = (a: any) => {
-  updatedViewText(a)
+  props.updatedViewText(a)
 }
 </script>
 
 <template>
-  <div
-    id="view"
-    :class="{
-      view: true,
-      'view_split show': splitScreen,
-      editnote_box: true,
-      show: visible,
-      hide: !visible
-    }"
-  >
+  <div id="view" :class="{
+    view: true,
+    'view_split show': splitScreen,
+    editnote_box: true,
+    show: visible,
+    hide: !visible
+  }">
     <v-card>
       <v-card-text class="cardcontent">
         <article id="viewnote_id" class="viewnote_content viewer viewnote_content">
@@ -59,12 +55,8 @@ const updateViewText = (a: any) => {
             <v-skeleton-loader type="list-item"></v-skeleton-loader>
           </template>
           <template v-if="isLoaded">
-            <ViewNoteMarkdown
-              :splitScreen="splitScreen"
-              :viewText="contextView"
-              :updatedViewText="updateViewText"
-              :disableLinks="false"
-            />
+            <ViewNoteMarkdown :splitScreen="splitScreen" :viewText="contextView" :updatedViewText="updateViewText"
+              :disableLinks="false" />
           </template>
         </article>
       </v-card-text>

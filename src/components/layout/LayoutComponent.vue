@@ -71,7 +71,8 @@ window &&
 const status = ref<NotificationStatus>(null)
 const notification = ref<NotificationObject | null>(null)
 
-let timer_notification: NodeJS.Timeout
+
+let timer_notification: ReturnType<typeof setTimeout>
 notificationStore.$subscribe((mutation, state) => {
   const res = state.notification
   status.value = res.notification.n_status
@@ -92,11 +93,8 @@ notificationStore.$subscribe((mutation, state) => {
   </main>
   <Transition name="notification">
     <template v-if="status">
-      <NotificationView
-        :n_status="notification!.notification.n_status"
-        :title="notification!.notification.title"
-        :message="notification!.notification.message"
-      />
+      <NotificationView :n_status="notification!.notification.n_status" :title="notification!.notification.title"
+        :message="notification!.notification.message" />
     </template>
   </Transition>
   <SnackBar />

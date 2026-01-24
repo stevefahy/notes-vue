@@ -9,7 +9,7 @@ const text = toRef(props, 'text')
 const isLoaded = ref<boolean>(false)
 let content: string
 
-let loadedTimer: NodeJS.Timeout
+let loadedTimer: ReturnType<typeof setTimeout>
 const hideSkeleton = () => {
   loadedTimer = setTimeout(() => {
     isLoaded.value = true

@@ -12,6 +12,8 @@ const userNotes = ref<Note[]>(props.notes)
 const isChecked = ref<CheckedNote[]>([])
 const isSelected = ref<SelectedNote>({ selected: [] })
 
+const inputRefs = ref<Record<string, HTMLInputElement>>({})
+
 watch(isSelected, (newVal) => {
   props.onNotesSelected(newVal)
 })
@@ -57,7 +59,7 @@ const checkboxStatus = (event: Event) => {
 }
 
 const divStatus = (id: any) => {
-  const target: HTMLInputElement = document.getElementById(`input_${id}`) as HTMLInputElement
+  const target: HTMLInputElement = inputRefs.value[id]
   let { checked } = target
   const checked_id = target.value
   target.checked = !checked
@@ -82,11 +84,8 @@ const EditLinkHandler = (noteid: string) => {
   <ul class="notes_list">
     <li class="notebook_list_bg" v-for="note in userNotes" :key="note._id">
       <div class="thumb_outer">
-        <router-link
-          @click="NoteLinkHandler"
-          :to="'/notebook/' + note.notebook + '/' + note._id"
-          class="thumb_outer_link"
-        >
+        <router-link @click="NoteLinkHandler" :to="'/notebook/' + note.notebook + '/' + note._id"
+          class="thumb_outer_link">
           <div class="thumb_outer_link">
             <div :id="note._id" class="edit_link" @click="EditLinkHandler(note._id)">
               <v-card class="note_list_card">
@@ -105,13 +104,8 @@ const EditLinkHandler = (noteid: string) => {
         <template v-if="onNotesEdit">
           <div class="thumb_select_outer">
             <div class="thumb_select">
-              <input
-                :id="`input_{{ note._id }}`"
-                type="checkbox"
-                name="Status"
-                :value="note._id"
-                @change="checkboxStatus($event)"
-              />
+              <input :ref="el => { if (el) inputRefs[note._id] = el as HTMLInputElement }" :id="`input_${note._id}`"
+                type="checkbox" name="Status" :value="note._id" @change="checkboxStatus($event)" />
             </div>
           </div>
         </template>

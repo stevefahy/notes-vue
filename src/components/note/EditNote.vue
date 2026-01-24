@@ -33,23 +33,15 @@ const setText = (event: Event) => {
 </script>
 
 <template>
-  <div
-    id="edit"
-    :class="{
-      'edit editnote_box': true,
-      'show editting': props.visible
-    }"
-  >
+  <div id="edit" :class="{
+    'edit editnote_box': true,
+    'show editting': props.visible
+  }">
     <v-card>
       <v-card-text>
         <article class="viewnote_content editor">
-          <div
-            ref="noteInputRef"
-            :contentEditable="props.visible || props.splitScreen"
-            class="viewnote_content editable"
-            @input="setText($event)"
-            data-placeholder="Start writing...'"
-          ></div>
+          <div ref="noteInputRef" :contentEditable="props.visible || props.splitScreen"
+            class="viewnote_content editable" @input="setText($event)" data-placeholder="Start writing...'"></div>
         </article>
       </v-card-text>
     </v-card>

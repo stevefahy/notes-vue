@@ -21,7 +21,7 @@ import hjls_js from 'highlight.js/lib/languages/javascript'
 import hjls_css from 'highlight.js/lib/languages/css'
 import hjls_markdown from 'highlight.js/lib/languages/markdown'
 
-globalThis.Buffer = Buffer
+  ; (globalThis as any).Buffer = Buffer
 
 // HIGHLIGHTJS
 hljs.registerLanguage('javascript', hjls_js)

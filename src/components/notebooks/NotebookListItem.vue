@@ -10,7 +10,7 @@ onMounted(() => {
   hideSkeleton()
 })
 
-let loadedTimer: NodeJS.Timeout
+let loadedTimer: ReturnType<typeof setTimeout>
 const hideSkeleton = () => {
   loadedTimer = setTimeout(() => {
     notebookLoaded.value = true

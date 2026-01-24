@@ -12,9 +12,9 @@ const props = defineProps<ProfileFormProps>()
 
 const userName = toRef(props, 'userName')
 
-const oldPasswordRef = ref<HTMLInputElement | null>(null)
-const newPasswordRef = ref<HTMLInputElement | null>(null)
-const newUsernameRef = ref<HTMLInputElement | null>(null)
+const oldPassword = ref<string>('')
+const newPassword = ref<string>('')
+const newUsername = ref<string>(props.userName || '')
 
 let onChangePassword = props.onChangePassword
 let onChangeUsername = props.onChangeUsername
@@ -37,24 +37,24 @@ const resetError = () => {
   }
 }
 
-const handleChangeUsername = (event: Event) => {
+const handleChangeUsername = () => {
   resetError()
-  const target = event.currentTarget! as HTMLInputElement
-  if (target.value.length < AC.USERNAME_MIN || target.value === undefined) {
+  const value = newUsername.value
+  if (value.length < AC.USERNAME_MIN || value === undefined) {
     formIsValid.value = false
     error.value = {
       error_state: true,
       error_severity: 'warning',
       message: AC.CHANGE_USER_TOO_FEW
     }
-  } else if (target.value.length > AC.USERNAME_MAX) {
+  } else if (value.length > AC.USERNAME_MAX) {
     formIsValid.value = false
     error.value = {
       error_state: true,
       error_severity: 'warning',
       message: AC.CHANGE_USER_TOO_MANY
     }
-  } else if (target.value === userName.value) {
+  } else if (value === userName.value) {
     formIsValid.value = false
     error.value = {
       error_state: true,
@@ -68,8 +68,8 @@ const handleChangeUsername = (event: Event) => {
 
 const handleChangePassword = () => {
   resetError()
-  const enteredOldPassword = oldPasswordRef.value?.value
-  const enteredNewPassword = newPasswordRef.value?.value
+  const enteredOldPassword = oldPassword.value || ''
+  const enteredNewPassword = newPassword.value || ''
   if (
     enteredOldPassword!.length < AC.PASSWORD_MIN ||
     enteredNewPassword!.length < AC.PASSWORD_MIN
@@ -108,7 +108,7 @@ const handleChangePassword = () => {
 
 const submitHandlerUsername = (event: Event) => {
   event.preventDefault()
-  const enteredNewUsername = newUsernameRef.value?.value
+  const enteredNewUsername = newUsername.value
   if (!enteredNewUsername) return
   onChangeUsername({
     newUsername: enteredNewUsername
@@ -119,8 +119,8 @@ const submitHandlerUsername = (event: Event) => {
 
 const submitHandlerPassword = (event: Event) => {
   event.preventDefault()
-  const enteredOldPassword = oldPasswordRef.value?.value
-  const enteredNewPassword = newPasswordRef.value?.value
+  const enteredOldPassword = oldPassword.value
+  const enteredNewPassword = newPassword.value
   if (!enteredOldPassword || !enteredNewPassword) {
     return
   }
@@ -140,12 +140,20 @@ const resetToggle = () => {
   resetError()
   userNameToggle.value = false
   passwordToggle.value = false
+  // Clear password fields when toggling
+  oldPassword.value = ''
+  newPassword.value = ''
+  newUsername.value = props.userName || '' // Reset to original username
 }
 
 const toggleUserName = () => {
   resetError()
   userNameToggle.value = !userNameToggle.value
   passwordToggle.value = false
+  // Initialize username with current value when opening the form
+  if (userNameToggle.value) {
+    newUsername.value = props.userName || ''
+  }
 }
 
 const togglePassword = () => {
@@ -157,22 +165,10 @@ const togglePassword = () => {
 
 <template>
   <div class="change_buttons">
-    <v-btn
-      mat-button
-      color="secondary"
-      aria-label="User Name button"
-      class="contained medium"
-      @click="toggleUserName"
-    >
+    <v-btn mat-button color="secondary" aria-label="User Name button" class="contained medium" @click="toggleUserName">
       User Name
     </v-btn>
-    <v-btn
-      mat-button
-      color="secondary"
-      aria-label="Password button"
-      class="contained medium"
-      @click="togglePassword"
-    >
+    <v-btn mat-button color="secondary" aria-label="Password button" class="contained medium" @click="togglePassword">
       Password
     </v-btn>
   </div>
@@ -181,35 +177,18 @@ const togglePassword = () => {
     <div class="form_container">
       <v-form class="form" @submit="submitHandlerPassword($event)">
         <div class="control">
-          <label htmlFor="new-password">New Password</label>
-          <input
-            autoComplete="New Password"
-            type="password"
-            id="new-password"
-            ref="newPasswordRef"
-            @input="resetError"
-            @blur="handleChangePassword"
-          />
+          <label for="new-password">New Password</label>
+          <input autoComplete="New Password" type="password" id="new-password" v-model="newPassword" @input="resetError"
+            @blur="handleChangePassword" />
         </div>
         <div class="control">
-          <label htmlFor="old-password">Old Password</label>
-          <input
-            autoComplete="New User Name"
-            type="password"
-            id="old-password"
-            ref="oldPasswordRef"
-            @input="resetError"
-            @blur="handleChangePassword"
-          />
+          <label for="old-password">Old Password</label>
+          <input autoComplete="Old Password" type="password" id="old-password" v-model="oldPassword" @input="resetError"
+            @blur="handleChangePassword" />
         </div>
         <div class="action">
-          <v-btn
-            type="submit"
-            color="secondary"
-            aria-label="Change Password button"
-            class="contained medium"
-            :disabled="!formIsValid"
-          >
+          <v-btn type="submit" color="secondary" aria-label="Change Password button" class="contained medium"
+            :disabled="!formIsValid">
             Change Password
           </v-btn>
         </div>
@@ -221,23 +200,12 @@ const togglePassword = () => {
     <div class="form_container">
       <v-form class="form" @submit="submitHandlerUsername">
         <div class="control">
-          <label htmlFor="new-username">User Name</label>
-          <input
-            :defaultValue="userName"
-            type="text"
-            id="new-password"
-            ref="newUsernameRef"
-            @input="handleChangeUsername($event)"
-          />
+          <label for="new-username">User Name</label>
+          <input v-model="newUsername" type="text" id="new-username" @input="handleChangeUsername()" />
         </div>
         <div class="action">
-          <v-btn
-            type="submit"
-            color="secondary"
-            aria-label="Change User Name button"
-            class="contained medium"
-            :disabled="!formIsValid"
-          >
+          <v-btn type="submit" color="secondary" aria-label="Change User Name button" class="contained medium"
+            :disabled="!formIsValid">
             Change User Name
           </v-btn>
         </div>
@@ -246,11 +214,7 @@ const togglePassword = () => {
   </template>
 
   <template v-if="error.error_state">
-    <ErrorAlert
-      :error_severity="error.error_severity"
-      :error_state="error.error_state"
-      :message="error.message"
-    />
+    <ErrorAlert :error_severity="error.error_severity" :error_state="error.error_state" :message="error.message" />
   </template>
 </template>
 

@@ -12,6 +12,13 @@ First, run the development server:
 npm run dev
 ```
 
+To create a build:
+
+```sh
+npm run build
+```
+The build output will be in the /dist folder.
+
 Open [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
 
 ## About

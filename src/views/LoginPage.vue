@@ -13,9 +13,15 @@ const AC = APPLICATION_CONSTANTS
 
 const isLogin = ref(true)
 const isSubmitting = ref(false)
+
+// Keep template refs only for focusing (optional - can be removed if not needed)
 const usernameInputRef: Ref<HTMLInputElement | undefined> = ref(undefined)
 const emailInputRef: Ref<HTMLInputElement | undefined> = ref(undefined)
 const passwordInputRef: Ref<HTMLInputElement | undefined> = ref(undefined)
+
+const username = ref<string>('')
+const email = ref<string>('')
+const password = ref<string>('')
 
 const error: Ref<AlertInterface> = ref({
   error_state: false,
@@ -36,6 +42,10 @@ updateContext(authStore.authContext)
 const switchAuthModeHandler = () => {
   resetError()
   isLogin.value = !isLogin.value
+  // Clear form when switching modes
+  username.value = ''
+  email.value = ''
+  password.value = ''
 }
 
 const resetError = () => {
@@ -45,7 +55,7 @@ const resetError = () => {
 
 const validateForm = (validate: string[]) => {
   if (validate.includes('username')) {
-    const enteredUsername = usernameInputRef.value?.value
+    const enteredUsername = username.value
     if (enteredUsername && enteredUsername.length < 2) {
       usernameInputRef.value?.focus()
       error.value = { error_state: true, message: AC.SIGNUP_INVALID_USERNAME }
@@ -53,7 +63,7 @@ const validateForm = (validate: string[]) => {
     }
   }
   if (validate.includes('email')) {
-    const enteredEmail = emailInputRef.value?.value
+    const enteredEmail = email.value
     if (!enteredEmail || !enteredEmail.includes('@') || !enteredEmail.includes('.')) {
       emailInputRef.value?.focus()
       error.value = { error_state: true, message: AC.SIGNUP_INVALID_EMAIL }
@@ -61,7 +71,7 @@ const validateForm = (validate: string[]) => {
     }
   }
   if (validate.includes('password')) {
-    const enteredPassword = passwordInputRef.value?.value
+    const enteredPassword = password.value
     if (!enteredPassword || enteredPassword.trim().length < 7) {
       passwordInputRef.value?.focus()
       error.value = { error_state: true, message: AC.SIGNUP_INVALID_PASSWORD }
@@ -75,8 +85,8 @@ const submitHandler = async (event: Event) => {
   event.preventDefault()
   isSubmitting.value = true
   error.value = { error_state: false, message: '' }
-  const enteredEmail = emailInputRef.value?.value
-  const enteredPassword = passwordInputRef.value?.value
+  const enteredEmail = email.value
+  const enteredPassword = password.value
 
   if (isLogin.value) {
     // Existing user
@@ -101,7 +111,7 @@ const submitHandler = async (event: Event) => {
     }
   } else {
     // New User
-    const enteredUsername = usernameInputRef.value?.value
+    const enteredUsername = username.value
     const validForm = validateForm(['username', 'email', 'password'])
     if (!validForm) {
       return
@@ -139,60 +149,27 @@ const submitHandler = async (event: Event) => {
         <form novalidate>
           <div v-if="!isLogin">
             <div class="control">
-              <label htmlFor="username">Your Name</label>
-              <input
-                type="text"
-                id="username"
-                required
-                placeholder="Username"
-                autoComplete="username"
-                @input="resetError"
-                ref="usernameInputRef"
-              />
+              <label for="username">Your Name</label>
+              <input type="text" id="username" required placeholder="Username" autoComplete="username"
+                v-model="username" @input="resetError" ref="usernameInputRef" />
             </div>
           </div>
           <div class="control">
-            <label htmlFor="email">Your Email</label>
-            <input
-              type="email"
-              id="email"
-              required
-              placeholder="Email"
-              autoComplete="email"
-              @change="resetError()"
-              @input="resetError()"
-              ref="emailInputRef"
-            />
+            <label for="email">Your Email</label>
+            <input type="email" id="email" required placeholder="Email" autoComplete="email" v-model="email"
+              @change="resetError()" @input="resetError()" ref="emailInputRef" />
           </div>
 
           <div class="control">
-            <label htmlFor="password">Your Password</label>
-            <input
-              type="password"
-              id="password"
-              required
-              placeholder="Password"
-              autoComplete="current-password"
-              @change="resetError()"
-              @input="resetError()"
-              ref="passwordInputRef"
-            />
+            <label for="password">Your Password</label>
+            <input type="password" id="password" required placeholder="Password" autoComplete="current-password"
+              v-model="password" @change="resetError()" @input="resetError()" ref="passwordInputRef" />
           </div>
           <div class="actions">
-            <v-btn
-              class="contained medium"
-              color="secondary"
-              @click="submitHandler"
-              :disabled="isSubmitting"
-            >
+            <v-btn class="contained medium" color="secondary" @click="submitHandler" :disabled="isSubmitting">
               {{ isLogin ? 'Login' : 'Create Account' }}
             </v-btn>
-            <v-btn
-              variant="text"
-              density="default"
-              class="basic large"
-              @click="switchAuthModeHandler()"
-            >
+            <v-btn variant="text" density="default" class="basic large" @click="switchAuthModeHandler()">
               {{ isLogin ? 'Create new account' : 'Login with existing account' }}
             </v-btn>
           </div>
@@ -200,11 +177,8 @@ const submitHandler = async (event: Event) => {
 
         <Transition name="error">
           <template v-if="error.error_state">
-            <error-alert
-              :error_state="error.error_state"
-              :message="error.message"
-              :error_severity="error.error_severity"
-            ></error-alert>
+            <error-alert :error_state="error.error_state" :message="error.message"
+              :error_severity="error.error_severity"></error-alert>
           </template>
         </Transition>
       </v-card-text>
