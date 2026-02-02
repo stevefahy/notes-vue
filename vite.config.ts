@@ -8,26 +8,32 @@ export default defineConfig({
     vue({
       template: { transformAssetUrls }
     }),
-    vuetify({ autoImport: true }),
+    vuetify({ autoImport: true })
   ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
-    extensions: ['.js', '.json', '.jsx', '.mjs', '.ts', '.tsx', '.vue'],
+    extensions: ['.js', '.json', '.jsx', '.mjs', '.ts', '.tsx', '.vue']
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   },
   optimizeDeps: {
-    include: ['vue', 'vuetify'],
+    include: ['vue', 'vuetify']
   },
   // Add build optimizations
   build: {
     rollupOptions: {
       onwarn(warning, warn) {
         // Suppress eval warnings from gray-matter
-        if (
-          warning.code === 'EVAL' &&
-          warning.id?.includes('gray-matter')
-        ) {
+        if (warning.code === 'EVAL' && warning.id?.includes('gray-matter')) {
           return
         }
         // Use default warning handler for all other warnings
@@ -36,7 +42,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           'vue-vendor': ['vue', 'vue-router', 'pinia'],
-          'vuetify-vendor': ['vuetify'],
+          'vuetify-vendor': ['vuetify']
         }
       }
     }
