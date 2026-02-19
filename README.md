@@ -38,6 +38,6 @@ By default the notes are displayed as rendered Markdown. The notes can be edited
 
 To move a Note or Notes from a Folder select the **Edit Notes** button. All the Notes within that folder will become selectable. Select those Notes which you want to move and then select the **Move** button. A dialogue box will appear with a dropdown list showing all available Notebooks. Select the destination Notebook and then select the **Move Note/s** button.
 
-To delete a Note or Notes from a folder select the **Edit Notes** button. All the notes within that folder will become selectable. Select those Notes which you want to delete and then select the **Delete** button. The selected N otes will be deleted.
+To delete a Note or Notes from a folder select the **Edit Notes** button. All the notes within that folder will become selectable. Select those Notes which you want to delete and then select the **Delete** button. The selected Notes will be deleted.
 
 The Notebooks and the Notes in a Notebook are displayed in the order which they were updated.
