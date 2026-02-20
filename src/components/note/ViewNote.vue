@@ -55,7 +55,7 @@ const updateViewText = (a: string) => {
             <v-skeleton-loader type="list-item"></v-skeleton-loader>
           </template>
           <template v-if="isLoaded">
-            <ViewNoteMarkdown :splitScreen="splitScreen" :viewText="contextView" :updatedViewText="updateViewText"
+            <ViewNoteMarkdown :splitScreen="splitScreen" :viewText="viewText" :updatedViewText="updateViewText"
               :disableLinks="false" />
           </template>
         </article>

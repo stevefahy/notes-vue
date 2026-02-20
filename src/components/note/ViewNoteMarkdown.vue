@@ -71,7 +71,7 @@ md.use(markdownItAttrs, {
 })
 
 md.use(markdownItTaskCheckbox, {
-  disabled: true,
+  disabled: false,
   divWrap: true,
   divClass: 'checkbox',
   idPrefix: 'cbx_',
@@ -177,6 +177,7 @@ md.renderer.rules.table_open = function () {
   return '<table class="table table-striped">'
 }
 
+
 // Add width and height to images
 md.renderer.rules.image = function (tokens: Token[], idx: number, options: Options, env: Record<string, unknown>, slf: typeof md.renderer) {
   const token = tokens[idx]
@@ -274,12 +275,62 @@ md.use(MarkdownItContainer, 'custom-css', {
 //  COMPONENT SETUP
 
 const props = defineProps<ViewNoteMarkdownProps>()
+const updatedViewText = toRef(props, 'updatedViewText')
 
 let content: string
 const contextView = ref<string>('')
 const isLoaded = ref<boolean>(false)
 const viewText = toRef(props, 'viewText')
 const outHtml = ref<string>('')
+
+// Task list line pattern: - [ ] or - [x] or * [ ] etc (GFM style)
+const TASK_LINE_RE = /^\s*[-*+]\s+\[[xX \u00A0]\s*\]/
+// Checkbox ID from plugin: cbx_0, cbx_1, cbx_2, ...
+const CBOX_ID_PREFIX = 'cbx_'
+
+const onChangeCheckbox = (taskIndex: number, checked: boolean) => {
+  if (typeof taskIndex !== 'number' || taskIndex < 0) return
+  const lines = content.split('\n')
+  let nth = 0
+  for (let i = 0; i < lines.length; i++) {
+    if (TASK_LINE_RE.test(lines[i])) {
+      if (nth === taskIndex) {
+        lines[i] = lines[i].replace(
+          /\[\s*(x|\s)\s*\]/i,
+          checked ? '[x]' : '[ ]'
+        )
+        const newContent = lines.join('\n')
+        if (props.updatedViewText) {
+          const parsed = matter(viewText.value)
+          const updatedFull =
+            Object.keys(parsed.data).length > 0
+              ? matter.stringify(newContent, parsed.data)
+              : newContent
+          props.updatedViewText(updatedFull)
+        }
+        return
+      }
+      nth++
+    }
+  }
+}
+
+const onCheckboxClick = (event: MouseEvent) => {
+  if (!props.updatedViewText) return
+  const target = event.target as HTMLElement
+  if (
+    target.tagName !== 'INPUT' ||
+    (target as HTMLInputElement).type !== 'checkbox'
+  ) {
+    return
+  }
+  const id = (target as HTMLInputElement).id
+  if (!id || !id.startsWith(CBOX_ID_PREFIX)) return
+  const taskIndex = parseInt(id.slice(CBOX_ID_PREFIX.length), 10)
+  if (isNaN(taskIndex) || taskIndex < 0) return
+  const checked = (target as HTMLInputElement).checked
+  onChangeCheckbox(taskIndex, checked)
+}
 
 watch(
   viewText,
@@ -296,10 +347,26 @@ watch(
 </script>
 
 <template>
-  <span v-html="outHtml"></span>
+  <span
+    class="md-rendered"
+    :class="{ 'md-readonly': !updatedViewText }"
+    @click="onCheckboxClick"
+  >
+    <span v-html="outHtml"></span>
+  </span>
 </template>
 
 <style scoped>
+.task-list input[type="checkbox"] {
+  cursor: pointer;
+  margin-right: 0.25em;
+}
+
+.md-readonly .task-list input[type="checkbox"] {
+  pointer-events: none;
+  cursor: default;
+}
+
 .codebox pre {
   box-shadow: rgba(0, 0, 0, 0.4) 1.95px 1.95px 2.6px;
 }
