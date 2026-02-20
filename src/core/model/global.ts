@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Global {}
 
 import type { TDateISO } from './date'
@@ -27,7 +28,7 @@ export interface NoteEditorView {
 }
 
 export interface ViewNoteThumb {
-  text: String
+  text: string
 }
 
 export interface ViewNoteMarkdownProps {

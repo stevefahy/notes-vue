@@ -5,7 +5,7 @@ import { Buffer } from 'buffer'
 import type { NoteEditorView } from '@/core/model/global'
 import ViewNoteMarkdown from './ViewNoteMarkdown.vue'
 
-  ; (globalThis as any).Buffer = Buffer
+  ; (globalThis as typeof globalThis & { Buffer: typeof Buffer }).Buffer = Buffer
 
 const props = defineProps<NoteEditorView>()
 
@@ -35,7 +35,7 @@ watch(
   { deep: true, immediate: true }
 )
 
-const updateViewText = (a: any) => {
+const updateViewText = (a: string) => {
   props.updatedViewText(a)
 }
 </script>

@@ -19,7 +19,7 @@ const hideSkeleton = () => {
 
 watch(
   text,
-  (val: any) => {
+  (val: string) => {
     content = val
     hideSkeleton()
   },

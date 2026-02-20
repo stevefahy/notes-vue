@@ -95,7 +95,7 @@ watch(selectedNotebook, (newValue) => {
 })
 
 if (props.notebooks) {
-  let sorted = sortNotes(props.notebooks)
+  const sorted = sortNotes(props.notebooks)
   notebooksSorted.value = sorted
 }
 </script>

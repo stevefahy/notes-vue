@@ -98,7 +98,7 @@ export const useAuthStore = defineStore('auth', () => {
       } else {
         autoLogout()
       }
-    } catch (err) {
+    } catch {
       resetAuthContext()
       autoLogout()
     }
@@ -117,7 +117,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (response.success) {
         return response
       }
-    } catch (err) {
+    } catch {
       // showNotification(`${err}`)
       return
     }

@@ -16,8 +16,8 @@ const oldPassword = ref<string>('')
 const newPassword = ref<string>('')
 const newUsername = ref<string>(props.userName || '')
 
-let onChangePassword = props.onChangePassword
-let onChangeUsername = props.onChangeUsername
+const onChangePassword = props.onChangePassword
+const onChangeUsername = props.onChangeUsername
 
 const userNameToggle = ref<boolean>(false)
 const passwordToggle = ref<boolean>(false)

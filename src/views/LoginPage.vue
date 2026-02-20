@@ -106,8 +106,9 @@ const submitHandler = async (event: Event) => {
       } else {
         error.value = { error_state: true, message: result.error }
       }
-    } catch (error: any) {
-      error.value = { error_state: true, message: error.message }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      error.value = { error_state: true, message: errorMessage }
     }
   } else {
     // New User
@@ -134,8 +135,9 @@ const submitHandler = async (event: Event) => {
       } else {
         router.push(`${APPLICATION_CONSTANTS.DEFAULT_PAGE}`)
       }
-    } catch (error: any) {
-      error.value = { error_state: true, message: error.message }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      error.value = { error_state: true, message: errorMessage }
     }
   }
 }

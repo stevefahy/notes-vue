@@ -1,11 +1,11 @@
 import { errString } from '../lib/errString'
 import APPLICATION_CONSTANTS from '../application-constants/application-constants'
-import type { ChangeUsername } from '../model/global'
+import type { ChangeUsername, NewUsernameObj } from '../model/global'
 
 const ENV = import.meta.env
 const AC = APPLICATION_CONSTANTS
 
-export const changeUsername = async (token: string, usernameData: {}): Promise<ChangeUsername> => {
+export const changeUsername = async (token: string, usernameData: NewUsernameObj): Promise<ChangeUsername> => {
   let response
   try {
     response = await fetch(ENV.VITE_API_ENDPOINT + `api/auth/change-username`, {

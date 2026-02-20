@@ -50,11 +50,13 @@ const notificationStore = useNotificationStore()
 // becomes:
 // height: calc(var(--jsvh) - var(--header-footer-height));
 const setScreenHeight = () => {
-  let jsvh = window && window.innerHeight
-  let header_height =
-    document && document.getElementById('header_height')?.getBoundingClientRect().height
-  document && document.documentElement.style.setProperty('--jsvh', `${jsvh}px`)
-  document && document.documentElement.style.setProperty('--jsheader-height', `${header_height}`)
+  const jsvh = window?.innerHeight ?? 0
+  const header_height =
+    document?.getElementById('header_height')?.getBoundingClientRect().height
+  if (document) {
+    document.documentElement.style.setProperty('--jsvh', `${jsvh}px`)
+    document.documentElement.style.setProperty('--jsheader-height', `${header_height}`)
+  }
 }
 
 // Set the initial screenHeight
@@ -63,10 +65,11 @@ setTimeout(() => {
 }, 0)
 
 // Set the screenHeight on window resize (includes orientation change)
-window &&
+if (window) {
   window.addEventListener('resize', () => {
     setScreenHeight()
   })
+}
 
 const status = ref<NotificationStatus>(null)
 const notification = ref<NotificationObject | null>(null)

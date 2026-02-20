@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { AlertInterface } from '@/core/model/global'
 const props = defineProps<AlertInterface>()
-let error_case = props.error_severity ? props.error_severity : 'warning'
+const error_case = props.error_severity ? props.error_severity : 'warning'
 </script>
 
 <template>

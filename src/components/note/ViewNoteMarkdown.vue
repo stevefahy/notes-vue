@@ -5,6 +5,7 @@ import type { ViewNoteMarkdownProps } from '@/core/model/global'
 import matter from 'gray-matter'
 import { Buffer } from 'buffer'
 import MarkdownIt from 'markdown-it'
+import type { Token, Options } from 'markdown-it'
 import MarkdownItContainer from 'markdown-it-container'
 import markdownItEmoji from 'markdown-it-emoji'
 import markdownItFootnote from 'markdown-it-footnote'
@@ -21,7 +22,7 @@ import hjls_js from 'highlight.js/lib/languages/javascript'
 import hjls_css from 'highlight.js/lib/languages/css'
 import hjls_markdown from 'highlight.js/lib/languages/markdown'
 
-  ; (globalThis as any).Buffer = Buffer
+  ; (globalThis as typeof globalThis & { Buffer: typeof Buffer }).Buffer = Buffer
 
 // HIGHLIGHTJS
 hljs.registerLanguage('javascript', hjls_js)
@@ -32,11 +33,12 @@ hljs.registerLanguage('md', hjls_markdown)
 // MARKDOWN-IT
 
 const md: MarkdownIt = MarkdownIt({
-  html: true,
+  html: false,
   linkify: true,
   typographer: true,
   langPrefix: 'language-',
-  highlight: function (str: any, lang: any) {
+  breaks: false,
+  highlight: function (str: string, lang: string | undefined) {
     if (lang && hljs.getLanguage(lang)) {
       return (
         '<pre class="hljs"><code>' +
@@ -114,48 +116,57 @@ const getSize = (node: string) => {
 // Add target blank to links
 // & Change Anchor links to scrollIntoView
 // Remember old renderer, if overridden, or proxy to default renderer
-var defaultRender =
+const defaultRender =
   md.renderer.rules.link_open ||
-  function (tokens: any, idx: any, options: any, env: any, slf: any) {
+  function (tokens: Token[], idx: number, options: Options, env: Record<string, unknown>, slf: typeof md.renderer) {
     return slf.renderToken(tokens, idx, options)
   }
 
-md.renderer.rules.link_open = function (tokens: any, idx: any, options: any, env: any, slf: any) {
-  var aIndex = tokens[idx].attrIndex('target')
-  var hIndex = tokens[idx].attrIndex('href')
+md.renderer.rules.link_open = function (tokens: Token[], idx: number, options: Options, env: Record<string, unknown>, slf: typeof md.renderer) {
+  const aIndex = tokens[idx].attrIndex('target')
+  const hIndex = tokens[idx].attrIndex('href')
   if (aIndex < 0) {
     tokens[idx].attrPush(['target', '_blank']) // add new attribute
   } else {
-    tokens[idx].attrs[aIndex][1] = '_blank' // replace value of existing attr
+    const attrs = tokens[idx].attrs
+    if (attrs && attrs[aIndex]) {
+      attrs[aIndex][1] = '_blank' // replace value of existing attr
+    }
   }
   // Change Anchor links to scrollIntoView
   // anchor links were causing page reload
   if (hIndex >= 0) {
-    let link_text = tokens[idx].attrs[hIndex][1]
-    if (link_text.charAt(0) === '#') {
-      tokens[idx].attrs[hIndex][1] = 'javascript: void(0)'
-      if (link_text.includes('#user-content-')) {
-        link_text = '#' + link_text.substring(14)
+    const attrs = tokens[idx].attrs
+    if (attrs && attrs[hIndex]) {
+      let link_text = attrs[hIndex][1]
+      if (link_text && link_text.charAt(0) === '#') {
+        attrs[hIndex][1] = 'javascript: void(0)'
+        if (link_text.includes('#user-content-')) {
+          link_text = '#' + link_text.substring(14)
+        }
+        const anchor_link = "'" + link_text + "'"
+        return (
+          '<span class="md_anchorlink" onclick="document.querySelector(' +
+          anchor_link +
+          ').scrollIntoView()">'
+        )
       }
-      const anchor_link = "'" + link_text + "'"
-      return (
-        '<span class="md_anchorlink" onclick="document.querySelector(' +
-        anchor_link +
-        ').scrollIntoView()">'
-      )
     }
   }
   return defaultRender(tokens, idx, options, env, slf)
 }
 
-md.renderer.rules.link_close = function (tokens: any, idx: any, options: any, env: any, slf: any) {
-  var hIndex = tokens[idx].attrIndex('href')
+md.renderer.rules.link_close = function (tokens: Token[], idx: number, options: Options, env: Record<string, unknown>, slf: typeof md.renderer) {
+  const hIndex = tokens[idx].attrIndex('href')
   if (hIndex >= 0) {
-    const link_text = tokens[idx].attrs[hIndex][1]
-    if (link_text.charAt(0) === '#') {
-      // change href
-      tokens[idx].attrs[hIndex][1] = 'javascript: void(0)'
-      return '</span>'
+    const attrs = tokens[idx].attrs
+    if (attrs && attrs[hIndex]) {
+      const link_text = attrs[hIndex][1]
+      if (link_text && link_text.charAt(0) === '#') {
+        // change href
+        attrs[hIndex][1] = 'javascript: void(0)'
+        return '</span>'
+      }
     }
   }
   return defaultRender(tokens, idx, options, env, slf)
@@ -167,8 +178,8 @@ md.renderer.rules.table_open = function () {
 }
 
 // Add width and height to images
-md.renderer.rules.image = function (tokens: any, idx: any, options: any, env: any, slf: any) {
-  var token = tokens[idx]
+md.renderer.rules.image = function (tokens: Token[], idx: number, options: Options, env: Record<string, unknown>, slf: typeof md.renderer) {
+  const token = tokens[idx]
   token.attrs![token.attrIndex('alt')][1] = slf.renderInlineAsText(token.children!, options, env)
   const size = getSize(token.attrs![token.attrIndex('alt')][1])
   token.attrSet('width', size.width + 'px')
@@ -178,13 +189,13 @@ md.renderer.rules.image = function (tokens: any, idx: any, options: any, env: an
 
 // Footnotes enable scrollIntoView instead of Anchor link
 md.renderer.rules.footnote_anchor = function (
-  tokens: any,
-  idx: any,
-  options: any,
-  env: any,
-  slf: any
+  tokens: Token[],
+  idx: number,
+  options: Options,
+  env: Record<string, unknown>,
+  slf: typeof md.renderer
 ) {
-  var id = slf.rules.footnote_anchor_name(tokens, idx, options, env, slf)
+  let id = slf.rules.footnote_anchor_name?.(tokens, idx, options, env, slf) || ''
   if (tokens[idx].meta.subId > 0) {
     id += ':' + tokens[idx].meta.subId
   }
@@ -200,15 +211,15 @@ md.renderer.rules.footnote_anchor = function (
 }
 
 md.renderer.rules.footnote_ref = function (
-  tokens: any,
-  idx: any,
-  options: any,
-  env: any,
-  slf: any
+  tokens: Token[],
+  idx: number,
+  options: Options,
+  env: Record<string, unknown>,
+  slf: typeof md.renderer
 ) {
-  var id = slf.rules.footnote_anchor_name(tokens, idx, options, env, slf)
-  var caption = slf.rules.footnote_caption(tokens, idx, options, env, slf)
-  var refid = id
+  const id = slf.rules.footnote_anchor_name?.(tokens, idx, options, env, slf) || ''
+  const caption = slf.rules.footnote_caption?.(tokens, idx, options, env, slf) || ''
+  let refid = id
   if (tokens[idx].meta.subId > 0) {
     refid += ':' + tokens[idx].meta.subId
   }
@@ -228,14 +239,14 @@ md.renderer.rules.footnote_ref = function (
 
 // Custom container that can have styles added
 md.use(MarkdownItContainer, 'custom', {
-  validate: function (params: any) {
+  validate: function (params: string) {
     return params.trim().match(/^custom\s+(.*)$/)
   },
-  render: function (tokens: any, idx: any) {
-    var m = tokens[idx].info.trim().match(/^custom\s+(.*)$/)
+  render: function (tokens: Token[], idx: number) {
+    const m = tokens[idx].info.trim().match(/^custom\s+(.*)$/)
     if (tokens[idx].nesting === 1) {
       // opening tag
-      return '<span style="' + md.utils.escapeHtml(m[1]) + '">\n'
+      return '<span style="' + md.utils.escapeHtml(m?.[1] || '') + '">\n'
     } else {
       // closing tag
       return '</span>\n'
@@ -245,14 +256,14 @@ md.use(MarkdownItContainer, 'custom', {
 
 // Custom container that can have css added
 md.use(MarkdownItContainer, 'custom-css', {
-  validate: function (params: any) {
+  validate: function (params: string) {
     return params.trim().match(/^custom-css\s+(.*)$/)
   },
-  render: function (tokens: any, idx: any) {
-    var m = tokens[idx].info.trim().match(/^custom-css\s+(.*)$/)
+  render: function (tokens: Token[], idx: number) {
+    const m = tokens[idx].info.trim().match(/^custom-css\s+(.*)$/)
     if (tokens[idx].nesting === 1) {
       // opening tag
-      return '<span class="' + md.utils.escapeHtml(m[1]) + '">\n'
+      return '<span class="' + md.utils.escapeHtml(m?.[1] || '') + '">\n'
     } else {
       // closing tag
       return '</span>\n'

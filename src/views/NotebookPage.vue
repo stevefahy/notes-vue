@@ -212,7 +212,7 @@ const editNoteFormHandler = () => {
 }
 
 const resetNotesSelected = () => {
-  let newarray: SelectedNote = { selected: [] }
+  const newarray: SelectedNote = { selected: [] }
   isSelected.value = {
     ...isSelected,
     selected: newarray.selected
@@ -265,7 +265,7 @@ const deleteNoteHandler = async () => {
         }
         if (updatedNotesLatestDate !== undefined && notebookId !== undefined && NotesLatestDate) {
           if (new Date(updatedNotesLatestDate).getTime() !== new Date(NotesLatestDate).getTime()) {
-            let nID = String(notebookId)
+            const nID = String(notebookId)
             updateNotebookDate(nID, updatedNotesLatestDate)
           }
         }
@@ -345,16 +345,16 @@ const editNotebookHandler = async (
 }
 
 const getLatestUpdated = (selected: string[]) => {
-  let found_notes = []
+  const found_notes = []
   for (const i in selected) {
     if (notes.value !== null) {
-      var result = notes.value!.filter((obj) => {
+      const result = notes.value!.filter((obj) => {
         return obj._id === selected[i]
       })
       found_notes.push(result[0])
     }
   }
-  let selected_notes = sortNotes(found_notes)
+  const selected_notes = sortNotes(found_notes)
   return selected_notes[0].updatedAt
 }
 
@@ -393,7 +393,7 @@ const moveNoteHandler = async (notebookID: string) => {
           updatedNotesLatestDate = notes.value[0].updatedAt
         }
         if (updatedNotesLatestDate !== undefined && notebookId !== undefined) {
-          let nID = String(notebookId)
+          const nID = String(notebookId)
           updateNotebookDate(nID, updatedNotesLatestDate)
         }
         // Close the dialog

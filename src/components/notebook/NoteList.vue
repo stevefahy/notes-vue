@@ -23,10 +23,10 @@ if (props.notes) {
   if (props_notes) {
     // Set the initial notes array
     userNotes.value = props_notes
-    let newarray: CheckedNote[] = []
+    const newarray: CheckedNote[] = []
     props_notes.forEach((note) => {
       // Set the checkboxes initial value to false
-      let newnote = { id: note._id, selected: false }
+      const newnote = { id: note._id, selected: false }
       newarray.push(newnote)
       return newarray
     })
@@ -36,13 +36,13 @@ if (props.notes) {
 
 const updateCheckbox = (checked_id: string, checked: boolean) => {
   const prev = [...isChecked.value]
-  let newarray: CheckedNote[] = prev
+  const newarray: CheckedNote[] = prev
   const is = isChecked.value?.findIndex((x) => x.id === checked_id)
   if (is >= 0 && newarray.length > 0) {
     newarray[is].selected = checked
   }
   isChecked.value = newarray
-  let newarrayS: SelectedNote = { selected: [] }
+  const newarrayS: SelectedNote = { selected: [] }
   isChecked.value?.forEach((x) => {
     if (x.selected) {
       newarrayS.selected.push(x.id)
@@ -58,7 +58,7 @@ const checkboxStatus = (event: Event) => {
   updateCheckbox(checked_id, checked)
 }
 
-const divStatus = (id: any) => {
+const divStatus = (id: string) => {
   const target: HTMLInputElement = inputRefs.value[id]
   let { checked } = target
   const checked_id = target.value

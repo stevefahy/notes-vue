@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { IAuthContext, IAuthDetails } from '@/core/model/global'
+import type { IAuthContext, IAuthDetails, ChangePasswordObj, NewUsernameObj } from '@/core/model/global'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { changePassword, changeUsername } from '@/core/helpers'
@@ -33,7 +33,7 @@ const showNotification = (msg: string) => {
   })
 }
 
-const changePasswordHandler = async (passwordData: {}) => {
+const changePasswordHandler = async (passwordData: ChangePasswordObj) => {
   if (token.value) {
     try {
       const response = await changePassword(token.value, passwordData)
@@ -48,10 +48,10 @@ const changePasswordHandler = async (passwordData: {}) => {
   }
 }
 
-const changeUsernameHandler = async (passwordData: {}) => {
+const changeUsernameHandler = async (usernameData: NewUsernameObj) => {
   if (token.value) {
     try {
-      const response = await changeUsername(token.value, passwordData)
+      const response = await changeUsername(token.value, usernameData)
       if (response.error) {
         showNotification(`${response.error}`)
         return
