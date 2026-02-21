@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { watch, ref, toRef } from 'vue'
+import { watch, ref, toRef, defineAsyncComponent } from 'vue'
 import type { ViewNoteThumb } from '@/core/model/global'
-import ViewNoteMarkdown from './ViewNoteMarkdown.vue'
+
+const ViewNoteMarkdown = defineAsyncComponent(() => import('./ViewNoteMarkdown.vue'))
 
 const props = defineProps<ViewNoteThumb>()
 

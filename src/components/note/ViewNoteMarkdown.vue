@@ -16,16 +16,13 @@ import markdownItAbbr from 'markdown-it-abbr'
 import markdownItAttrs from 'markdown-it-attrs'
 import markdownItTaskCheckbox from 'markdown-it-task-checkbox'
 import markdownItAnchor from 'markdown-it-anchor'
-import hljs from 'highlight.js/lib/core'
-import hjls_js from 'highlight.js/lib/languages/javascript'
-import hjls_css from 'highlight.js/lib/languages/css'
-import hjls_markdown from 'highlight.js/lib/languages/markdown'
+import Prism from 'prismjs'
+import 'prismjs/components/prism-javascript'
+import 'prismjs/components/prism-css'
+import 'prismjs/components/prism-markdown'
 
-// HIGHLIGHTJS
-hljs.registerLanguage('javascript', hjls_js)
-hljs.registerLanguage('css', hjls_css)
-hljs.registerLanguage('markdown', hjls_markdown)
-hljs.registerLanguage('md', hjls_markdown)
+// Language alias: md -> markdown
+const langAliases: Record<string, string> = { md: 'markdown' }
 
 // MARKDOWN-IT
 
@@ -36,17 +33,23 @@ const md: MarkdownIt = MarkdownIt({
   langPrefix: 'language-',
   breaks: false,
   highlight: function (str: string, lang: string | undefined) {
-    if (lang && hljs.getLanguage(lang)) {
+    const prismLang = lang ? (langAliases[lang] || lang) : undefined
+    if (prismLang && Prism.languages[prismLang]) {
+      const highlighted = Prism.highlight(str, Prism.languages[prismLang], prismLang)
       return (
-        '<pre class="hljs"><code>' +
-        hljs.highlight(str, { language: lang, ignoreIllegals: false }).value +
+        '<pre class="language-' +
+        md.utils.escapeHtml(prismLang) +
+        '"><code class="language-' +
+        md.utils.escapeHtml(prismLang) +
+        '">' +
+        highlighted +
         '</code></pre><p>' +
-        lang +
+        (lang || '') +
         '</p>'
       )
     }
     return (
-      '<pre class="hljs"><code>' + md.utils.escapeHtml(str) + '</code></pre><p>' + lang + '</p>'
+      '<pre><code>' + md.utils.escapeHtml(str) + '</code></pre><p>' + (lang || '') + '</p>'
     )
   }
 })

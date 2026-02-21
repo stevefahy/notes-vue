@@ -717,8 +717,7 @@ main {
   height: auto;
 }
 
-p .hljs code,
-li .hljs code {
+.viewnote_content pre code {
   background-color: inherit;
   display: inline-block;
 }

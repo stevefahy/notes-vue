@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, watch, toRef } from 'vue'
+import { ref, watch, toRef, defineAsyncComponent } from 'vue'
 import matter from 'gray-matter'
 import type { NoteEditorView } from '@/core/model/global'
-import ViewNoteMarkdown from './ViewNoteMarkdown.vue'
+
+const ViewNoteMarkdown = defineAsyncComponent(() => import('./ViewNoteMarkdown.vue'))
 
 const props = defineProps<NoteEditorView>()
 
