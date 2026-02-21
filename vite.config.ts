@@ -8,7 +8,10 @@ export default defineConfig({
     vue({
       template: { transformAssetUrls }
     }),
-    vuetify({ autoImport: true })
+    vuetify({
+      autoImport: true,
+      styles: { configFile: 'src/settings.scss' }
+    })
   ],
   resolve: {
     alias: {
