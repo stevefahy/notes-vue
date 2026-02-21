@@ -21,7 +21,6 @@
 }
 
 .breadcrumb_link .icon_notebook {
-  transform: rotate(180deg);
   transform: scaleY(-1);
 }
 
@@ -97,7 +96,7 @@
 
 .breadcrumb_edit_fab:hover,
 .breadcrumb_edit_fab:focus {
-  background-color: rgb(245, 245, 245, 0);
+  background-color: transparent;
   transition:
     background-color 250ms cubic-bezier(0.4, 0, 0.2, 1) 0ms,
     box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1) 0ms,

@@ -1,14 +1,3 @@
-input {
-  font-size: 0.8rem !important;
-  border-style: inset !important;
-  background-color: field;
-  margin: 0em;
-  padding: 1px 2px;
-  border-width: 1px;
-  border-style: inset !important;
-  border-color: -internal-light-dark(rgb(118, 118, 118), rgb(133, 133, 133)) !important;
-}
-
 .v-card--variant-elevated {
   box-shadow:
     #0003 0 3px 3px -2px,
@@ -30,11 +19,8 @@ input {
   background-color: #7d0000 !important;
 }
 
-$color-primary: #4d0000;
-$color-secondary: #b30000;
-
 .basic {
-  color: $color-secondary !important;
+  color: var(--color-secondary) !important;
 }
 
 // Large
@@ -94,10 +80,6 @@ $color-secondary: #b30000;
   font-size: 1.25rem !important;
   line-height: 1.6 !important;
   letter-spacing: 0.0075em !important;
-}
-
-notebooklistitem {
-  width: 100%;
 }
 
 input,

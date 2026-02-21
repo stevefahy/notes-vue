@@ -413,8 +413,4 @@ watch(
   height: auto;
 }
 
-:host .test_imagex {
-  display: inline-block;
-  vertical-align: top;
-}
 </style>

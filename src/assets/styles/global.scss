@@ -8,7 +8,6 @@ body {
   margin: 0;
 
   padding: 0;
-  margin: 0;
 
   --color-white-000: hsl(0, 0%, 100%);
   --color-grey-50: hsl(265, 55%, 96%);
@@ -104,7 +103,9 @@ body {
 
   --viewnotethumb-box-min-height: 56;
 
-  margin: 0;
+  --color-link: #428bca;
+  --color-code-bg: #4b4b59;
+
   color: rgb(98, 98, 98);
   font-family: 'Helvetica', 'Arial', sans-serif;
 }
@@ -232,7 +233,7 @@ select {
 }
 
 .viewnote_content a {
-  color: #428bca !important;
+  color: var(--color-link) !important;
   word-break: break-word;
 }
 
@@ -290,12 +291,8 @@ span.token {
   margin-left: -15px;
   align-items: flex-start;
   vertical-align: top;
-  margin-bottom: 2px;
-}
-
-.viewnote_content ul li.task-list-item {
-  margin-bottom: 0px !important;
-  margin-top: 0px !important;
+  margin-bottom: 0;
+  margin-top: 0;
 }
 
 .viewnote_content ul li input {
@@ -313,15 +310,6 @@ span.token {
 
 .viewnote_content ul li a {
   display: contents;
-}
-
-.MuiCardContent-root:last-child {
-  padding-bottom: 16px;
-}
-
-.MuiCardContent-root {
-  padding: 16px;
-  padding-bottom: 10px !important;
 }
 
 .material-symbols-outlined {
@@ -348,18 +336,6 @@ span.token {
 
   .material-symbols-outlined {
     font-size: 20px;
-  }
-
-  svg.MuiSvgIcon-root {
-    font-size: 1.2rem;
-  }
-
-  button.MuiButtonBase-root {
-    font-size: 12px;
-    padding-left: 12px;
-    padding-right: 12px;
-    padding-top: 8px;
-    padding-bottom: 8px;
   }
 
   .button_icon {
@@ -413,8 +389,9 @@ span.token {
   overflow: hidden !important;
 }
 
+/* Suppress Vuetify's default m-3 margin inside the note body area */
 body .m-3 {
-  margin: 0rem !important;
+  margin: 0 !important;
 }
 
 .highlightRoot {
@@ -425,7 +402,7 @@ body .m-3 {
 .inlineCode {
   display: inline-flex;
   padding: 0 4px;
-  background-color: #4b4b59;
+  background-color: var(--color-code-bg);
   color: white;
   border-radius: 5px;
   box-shadow: rgba(0, 0, 0, 0.4) 1.95px 1.95px 2.6px;
@@ -474,18 +451,6 @@ table {
   background-color: #f9f9f9;
 }
 
-.table > thead > tr > th,
-.table > tbody > tr > th,
-.table > tfoot > tr > th,
-.table > thead > tr > td,
-.table > tbody > tr > td,
-.table > tfoot > tr > td {
-  padding: 8px;
-  line-height: 1.42857143;
-  vertical-align: top;
-  border-top: 1px solid #ddd;
-}
-
 .table > thead > tr > th {
   vertical-align: bottom;
   border-bottom: 2px solid #ddd;
@@ -510,16 +475,11 @@ blockquote {
   padding-left: 20px;
   padding-top: 15px;
   padding-bottom: 5px;
-  padding-left: 20px;
-  padding-right: 20px;
   margin: 0px 0 0px;
   font-size: var(--size-4a);
   border-left: 1px solid #ababab;
-  -webkit-margin-start: 0px;
   margin-inline-start: 0px;
-  -webkit-margin-before: 0px;
   margin-block-start: 10px;
-  -webkit-margin-end: 0px;
   margin-inline-end: 0px;
   margin-bottom: 15px;
   color: gray;
@@ -567,10 +527,6 @@ ins::before {
 
 ins::before {
   content: '+';
-}
-
-code {
-  font-family: inherit;
 }
 
 code {
@@ -695,11 +651,6 @@ ul p {
   align-items: flex-start;
 }
 
-.MuiBreadcrumbs-separator {
-  margin-left: 2px !important;
-  margin-right: 2px !important;
-}
-
 .loading_routes {
   width: 100%;
   height: calc(
@@ -774,7 +725,7 @@ li .hljs code {
 
 p code,
 li code {
-  background-color: #4b4b59;
+  background-color: var(--color-code-bg);
   border-radius: 5px;
   box-shadow: 1.95px 1.95px 2.6px rgba(0, 0, 0, 0.4);
   color: #fff;
@@ -826,20 +777,8 @@ li code {
   background: #2196f3;
 }
 
-.mat-mdc-snack-bar-container {
-  &.snackbar {
-    border-radius: 15px;
-    --mdc-snackbar-container-color: rgb(236, 247, 237);
-    --mat-mdc-snack-bar-button-color: #116600;
-    --mdc-snackbar-supporting-text-color: #116600;
-    --mat-snack-bar-button-color: #116600;
-    position: relative;
-    bottom: 70px;
-  }
-}
-
 .md_anchorlink {
-  color: #428bca !important;
+  color: var(--color-link) !important;
   cursor: pointer;
 }
 

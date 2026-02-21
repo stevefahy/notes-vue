@@ -55,17 +55,13 @@ ul.notebooks_list .notebooks_list_bg {
   padding: 0 16px !important;
 }
 
-.notebooks_list li:first-child {
-  padding-top: 10px;
-}
-
 .notebooks_list_bg {
   position: relative;
   padding-top: 10px;
 }
 
 .notebook_default {
-  color: var(--notebook-color-default);
+  color: var(--notebook-color-bg-default);
   background: var(--notebook-color-bg-default);
 }
 
