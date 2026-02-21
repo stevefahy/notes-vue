@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { ref, watch, toRef } from 'vue'
 import matter from 'gray-matter'
-import { Buffer } from 'buffer'
 import type { NoteEditorView } from '@/core/model/global'
 import ViewNoteMarkdown from './ViewNoteMarkdown.vue'
-
-  ; (globalThis as typeof globalThis & { Buffer: typeof Buffer }).Buffer = Buffer
 
 const props = defineProps<NoteEditorView>()
 
@@ -55,7 +52,7 @@ const updateViewText = (a: string) => {
             <v-skeleton-loader type="list-item"></v-skeleton-loader>
           </template>
           <template v-if="isLoaded">
-            <ViewNoteMarkdown :splitScreen="splitScreen" :viewText="viewText" :updatedViewText="updateViewText"
+            <ViewNoteMarkdown :viewText="viewText" :updatedViewText="updateViewText"
               :disableLinks="false" />
           </template>
         </article>

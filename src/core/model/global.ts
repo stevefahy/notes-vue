@@ -33,8 +33,6 @@ export interface ViewNoteThumb {
 
 export interface ViewNoteMarkdownProps {
   viewText: string
-  scrollView?: number
-  splitScreen?: boolean
   updatedViewText?: (updatedEdit: string) => void
   disableLinks: boolean
 }

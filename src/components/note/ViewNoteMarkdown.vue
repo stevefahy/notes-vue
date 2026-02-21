@@ -3,7 +3,6 @@ import { watch, ref, toRef } from 'vue'
 import emoji_defs from '@/core/lib/emoji_definitions'
 import type { ViewNoteMarkdownProps } from '@/core/model/global'
 import matter from 'gray-matter'
-import { Buffer } from 'buffer'
 import MarkdownIt from 'markdown-it'
 import type { Token, Options } from 'markdown-it'
 import MarkdownItContainer from 'markdown-it-container'
@@ -21,8 +20,6 @@ import hljs from 'highlight.js/lib/core'
 import hjls_js from 'highlight.js/lib/languages/javascript'
 import hjls_css from 'highlight.js/lib/languages/css'
 import hjls_markdown from 'highlight.js/lib/languages/markdown'
-
-  ; (globalThis as typeof globalThis & { Buffer: typeof Buffer }).Buffer = Buffer
 
 // HIGHLIGHTJS
 hljs.registerLanguage('javascript', hjls_js)
@@ -113,16 +110,20 @@ const getSize = (node: string) => {
 
 // MD RENDERER RULES
 
-// Add target blank to links
-// & Change Anchor links to scrollIntoView
+// Add target="_blank" to external links.
+// Convert anchor links (#fragment) to data-scroll-target spans to avoid page reload.
 // Remember old renderer, if overridden, or proxy to default renderer
 const defaultRender =
   md.renderer.rules.link_open ||
-  function (tokens: Token[], idx: number, options: Options, env: Record<string, unknown>, slf: typeof md.renderer) {
+  function (tokens: Token[], idx: number, options: Options, _env: Record<string, unknown>, slf: typeof md.renderer) {
     return slf.renderToken(tokens, idx, options)
   }
 
 md.renderer.rules.link_open = function (tokens: Token[], idx: number, options: Options, env: Record<string, unknown>, slf: typeof md.renderer) {
+  // #1: disableLinks — strip all links in thumbnail/preview mode
+  if (env.disableLinks) {
+    return '<span>'
+  }
   const aIndex = tokens[idx].attrIndex('target')
   const hIndex = tokens[idx].attrIndex('href')
   if (aIndex < 0) {
@@ -133,22 +134,22 @@ md.renderer.rules.link_open = function (tokens: Token[], idx: number, options: O
       attrs[aIndex][1] = '_blank' // replace value of existing attr
     }
   }
-  // Change Anchor links to scrollIntoView
-  // anchor links were causing page reload
+  // Change anchor links to data-scroll-target spans (avoid page reload)
   if (hIndex >= 0) {
     const attrs = tokens[idx].attrs
     if (attrs && attrs[hIndex]) {
       let link_text = attrs[hIndex][1]
       if (link_text && link_text.charAt(0) === '#') {
-        attrs[hIndex][1] = 'javascript: void(0)'
         if (link_text.includes('#user-content-')) {
           link_text = '#' + link_text.substring(14)
         }
-        const anchor_link = "'" + link_text + "'"
+        // #2: track open state in env so link_close emits </span>
+        env.anchorOpen = true
+        // #4: data-* attribute instead of inline onclick; #11: escape user value; #12: tabindex
         return (
-          '<span class="md_anchorlink" onclick="document.querySelector(' +
-          anchor_link +
-          ').scrollIntoView()">'
+          '<span class="md_anchorlink" data-scroll-target="' +
+          md.utils.escapeHtml(link_text) +
+          '" tabindex="0" role="link">'
         )
       }
     }
@@ -156,18 +157,14 @@ md.renderer.rules.link_open = function (tokens: Token[], idx: number, options: O
   return defaultRender(tokens, idx, options, env, slf)
 }
 
+// #2: link_close — emit </span> when the matching open was an anchor span or disabled link
 md.renderer.rules.link_close = function (tokens: Token[], idx: number, options: Options, env: Record<string, unknown>, slf: typeof md.renderer) {
-  const hIndex = tokens[idx].attrIndex('href')
-  if (hIndex >= 0) {
-    const attrs = tokens[idx].attrs
-    if (attrs && attrs[hIndex]) {
-      const link_text = attrs[hIndex][1]
-      if (link_text && link_text.charAt(0) === '#') {
-        // change href
-        attrs[hIndex][1] = 'javascript: void(0)'
-        return '</span>'
-      }
-    }
+  if (env.disableLinks) {
+    return '</span>'
+  }
+  if (env.anchorOpen) {
+    env.anchorOpen = false
+    return '</span>'
   }
   return defaultRender(tokens, idx, options, env, slf)
 }
@@ -177,18 +174,20 @@ md.renderer.rules.table_open = function () {
   return '<table class="table table-striped">'
 }
 
-
 // Add width and height to images
 md.renderer.rules.image = function (tokens: Token[], idx: number, options: Options, env: Record<string, unknown>, slf: typeof md.renderer) {
   const token = tokens[idx]
-  token.attrs![token.attrIndex('alt')][1] = slf.renderInlineAsText(token.children!, options, env)
-  const size = getSize(token.attrs![token.attrIndex('alt')][1])
+  // #9: guard against missing attrs or alt attribute
+  const altIdx = token.attrIndex('alt')
+  if (!token.attrs || altIdx < 0) return slf.renderToken(tokens, idx, options)
+  token.attrs[altIdx][1] = slf.renderInlineAsText(token.children!, options, env)
+  const size = getSize(token.attrs[altIdx][1])
   token.attrSet('width', size.width + 'px')
   token.attrSet('height', size.height + 'px')
   return '<span class="image">' + slf.renderToken(tokens, idx, options) + '</span>'
 }
 
-// Footnotes enable scrollIntoView instead of Anchor link
+// Footnotes: use data-scroll-target instead of inline onclick (#4), fix duplicate IDs (#3)
 md.renderer.rules.footnote_anchor = function (
   tokens: Token[],
   idx: number,
@@ -200,13 +199,14 @@ md.renderer.rules.footnote_anchor = function (
   if (tokens[idx].meta.subId > 0) {
     id += ':' + tokens[idx].meta.subId
   }
-  const newid = "'#fnref" + id + "'"
+  // #3: use unique id "fnref{id}-return" to avoid duplicate with footnote_ref's "fnref{id}"
+  // #4: data-scroll-target replaces inline onclick; #11: escape id; #12: tabindex
   return (
-    '<span class="footnote-backref" onclick="document.querySelector(' +
-    newid +
-    ').scrollIntoView()" id="fnref' +
-    id +
-    '">\u21a9\uFE0E</span>'
+    '<span class="footnote-backref" data-scroll-target="' +
+    md.utils.escapeHtml('#fnref' + id) +
+    '" id="fnref' +
+    md.utils.escapeHtml(id) +
+    '-return" tabindex="0" role="link">\u21a9\uFE0E</span>'
   )
   /* ↩ with escape code to prevent display as Apple Emoji on iOS */
 }
@@ -224,13 +224,13 @@ md.renderer.rules.footnote_ref = function (
   if (tokens[idx].meta.subId > 0) {
     refid += ':' + tokens[idx].meta.subId
   }
-  const newid = "'#fn" + id + "'"
+  // #4: data-scroll-target replaces inline onclick; #11: escape id; #12: tabindex
   return (
-    '<sup class="footnote-ref"><span onclick="document.querySelector(' +
-    newid +
-    ').scrollIntoView()" id="fnref' +
-    refid +
-    '">' +
+    '<sup class="footnote-ref"><span data-scroll-target="' +
+    md.utils.escapeHtml('#fn' + id) +
+    '" id="fnref' +
+    md.utils.escapeHtml(refid) +
+    '" tabindex="0" role="link">' +
     caption +
     '</span></sup>'
   )
@@ -278,6 +278,8 @@ const props = defineProps<ViewNoteMarkdownProps>()
 const updatedViewText = toRef(props, 'updatedViewText')
 
 let content: string
+// #6: cache parsed frontmatter so onChangeCheckbox avoids a second matter() call
+let frontmatterData: Record<string, unknown> = {}
 const contextView = ref<string>('')
 const isLoaded = ref<boolean>(false)
 const viewText = toRef(props, 'viewText')
@@ -301,10 +303,10 @@ const onChangeCheckbox = (taskIndex: number, checked: boolean) => {
         )
         const newContent = lines.join('\n')
         if (props.updatedViewText) {
-          const parsed = matter(viewText.value)
+          // #6: use cached frontmatterData instead of re-parsing
           const updatedFull =
-            Object.keys(parsed.data).length > 0
-              ? matter.stringify(newContent, parsed.data)
+            Object.keys(frontmatterData).length > 0
+              ? matter.stringify(newContent, frontmatterData)
               : newContent
           props.updatedViewText(updatedFull)
         }
@@ -315,9 +317,23 @@ const onChangeCheckbox = (taskIndex: number, checked: boolean) => {
   }
 }
 
+// #4: helper — scroll an element identified by its data-scroll-target attribute
+const scrollToTarget = (el: HTMLElement) => {
+  const target = el.dataset.scrollTarget
+  if (target) {
+    document.querySelector(target)?.scrollIntoView()
+  }
+}
+
 const onCheckboxClick = (event: MouseEvent) => {
-  if (!props.updatedViewText) return
   const target = event.target as HTMLElement
+  // #4: handle scroll targets (anchor links, footnote refs, footnote back-refs)
+  const scrollEl = target.closest('[data-scroll-target]') as HTMLElement | null
+  if (scrollEl) {
+    scrollToTarget(scrollEl)
+    return
+  }
+  if (!props.updatedViewText) return
   if (
     target.tagName !== 'INPUT' ||
     (target as HTMLInputElement).type !== 'checkbox'
@@ -332,14 +348,28 @@ const onCheckboxClick = (event: MouseEvent) => {
   onChangeCheckbox(taskIndex, checked)
 }
 
+// #12: keyboard navigation for focusable scroll-target elements (Enter / Space)
+const onMarkdownKeydown = (event: KeyboardEvent) => {
+  if (event.key !== 'Enter' && event.key !== ' ') return
+  const target = event.target as HTMLElement
+  if (target.dataset.scrollTarget) {
+    event.preventDefault()
+    scrollToTarget(target)
+  }
+}
+
 watch(
   viewText,
   (val) => {
-    content = matter(val).content
+    // #6: parse once and cache both content and frontmatter
+    const parsed = matter(val)
+    content = parsed.content
+    frontmatterData = parsed.data
     if (content !== contextView.value) {
       contextView.value = content
       isLoaded.value = true
-      outHtml.value = md.render(contextView.value)
+      // #1: pass disableLinks via env so the module-level renderer can read it
+      outHtml.value = md.render(contextView.value, { disableLinks: props.disableLinks })
     }
   },
   { deep: true, immediate: true }
@@ -347,7 +377,7 @@ watch(
 </script>
 
 <template>
-  <span class="md-rendered" :class="{ 'md-readonly': !updatedViewText }" @click="onCheckboxClick">
+  <span class="md-rendered" :class="{ 'md-readonly': !updatedViewText }" @click="onCheckboxClick" @keydown="onMarkdownKeydown">
     <span v-html="outHtml"></span>
   </span>
 </template>
