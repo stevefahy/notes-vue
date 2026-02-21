@@ -35,7 +35,9 @@ const setText = (event: Event) => {
 <template>
   <div id="edit" :class="{
     'edit editnote_box': true,
-    'show editting': props.visible
+    'show editting': props.visible,
+    'show': !props.visible && props.splitScreen,
+    'hide': !props.visible && !props.splitScreen
   }">
     <v-card>
       <v-card-text>

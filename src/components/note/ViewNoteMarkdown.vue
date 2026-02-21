@@ -347,11 +347,7 @@ watch(
 </script>
 
 <template>
-  <span
-    class="md-rendered"
-    :class="{ 'md-readonly': !updatedViewText }"
-    @click="onCheckboxClick"
-  >
+  <span class="md-rendered" :class="{ 'md-readonly': !updatedViewText }" @click="onCheckboxClick">
     <span v-html="outHtml"></span>
   </span>
 </template>
