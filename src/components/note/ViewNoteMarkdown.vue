@@ -54,6 +54,26 @@ const md: MarkdownIt = MarkdownIt({
   }
 })
 
+
+// Add a ruler to recognize <br> as a hardbreak
+md.inline.ruler.push('html_br', (state, silent) => {
+  if (state.src.slice(state.pos, state.pos + 4) === '<br>') {
+    if (!silent) {
+      state.push('hardbreak', 'br', 0);
+    }
+    state.pos += 4;
+    return true;
+  }
+  if (state.src.slice(state.pos, state.pos + 5) === '<br/>') {
+    if (!silent) {
+      state.push('hardbreak', 'br', 0);
+    }
+    state.pos += 5;
+    return true;
+  }
+  return false;
+});
+
 // MARKDOWN-IT PLUGINS
 
 md.use(markdownItEmoji, { defs: emoji_defs })
@@ -380,7 +400,8 @@ watch(
 </script>
 
 <template>
-  <span class="md-rendered" :class="{ 'md-readonly': !updatedViewText }" @click="onCheckboxClick" @keydown="onMarkdownKeydown">
+  <span class="md-rendered" :class="{ 'md-readonly': !updatedViewText }" @click="onCheckboxClick"
+    @keydown="onMarkdownKeydown">
     <span v-html="outHtml"></span>
   </span>
 </template>
@@ -415,5 +436,4 @@ watch(
   width: auto;
   height: auto;
 }
-
 </style>
