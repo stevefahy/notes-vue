@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "overrides": {
+    "minimatch": "^10.2.1"
+  },
   "scripts": {
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
@@ -20,7 +23,7 @@
     "@mdi/font": "^7.3.67",
     "buffer": "^6.0.3",
     "date-fns": "^2.30.0",
-    "gray-matter": "^4.0.3",
+    "front-matter": "^4.0.2",
     "markdown-it": "^14.1.1",
     "markdown-it-abbr": "^1.0.4",
     "markdown-it-attrs": "^4.1.6",
@@ -32,7 +35,6 @@
     "markdown-it-sub": "^1.0.0",
     "markdown-it-sup": "^1.0.0",
     "markdown-it-task-checkbox": "^1.0.6",
-    "meow": "^9.0.0",
     "mongodb": "^6.2.0",
     "pinia": "^2.1.7",
     "prismjs": "^1.30.0",
@@ -54,7 +56,7 @@
     "@types/prismjs": "^1.26.3",
     "@vitejs/plugin-vue": "^6.0.3",
     "@vue/eslint-config-prettier": "^10.1.0",
-    "@vue/eslint-config-typescript": "^14.1.0",
+    "@vue/eslint-config-typescript": "^14.7.0",
     "@vue/test-utils": "^2.4.0",
     "@vue/tsconfig": "^0.4.0",
     "eslint": "^10.0.1",

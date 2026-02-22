@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, toRef, defineAsyncComponent } from 'vue'
-import matter from 'gray-matter'
+import fm from 'front-matter'
 import type { NoteEditorView } from '@/core/model/global'
 
 const ViewNoteMarkdown = defineAsyncComponent(() => import('./ViewNoteMarkdown.vue'))
@@ -26,7 +26,7 @@ const hideSkeleton = () => {
 watch(
   viewText,
   (val) => {
-    content = matter(val).content
+    content = fm(val).body
     contextView.value = content
     hideSkeleton()
   },

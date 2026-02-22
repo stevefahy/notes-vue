@@ -37,14 +37,6 @@ export default defineConfig({
   // Add build optimizations
   build: {
     rollupOptions: {
-      onwarn(warning, warn) {
-        // Suppress eval warnings from gray-matter
-        if (warning.code === 'EVAL' && warning.id?.includes('gray-matter')) {
-          return
-        }
-        // Use default warning handler for all other warnings
-        warn(warning)
-      },
       output: {
         manualChunks: {
           'vue-vendor': ['vue', 'vue-router', 'pinia'],

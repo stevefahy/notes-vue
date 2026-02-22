@@ -2,7 +2,7 @@
 import { watch, ref, toRef } from 'vue'
 import emoji_defs from '@/core/lib/emoji_definitions'
 import type { ViewNoteMarkdownProps } from '@/core/model/global'
-import matter from 'gray-matter'
+import fm from 'front-matter'
 import MarkdownIt from 'markdown-it'
 import type { Token, Options } from 'markdown-it'
 import MarkdownItContainer from 'markdown-it-container'
@@ -301,8 +301,9 @@ const props = defineProps<ViewNoteMarkdownProps>()
 const updatedViewText = toRef(props, 'updatedViewText')
 
 let content: string
-// #6: cache parsed frontmatter so onChangeCheckbox avoids a second matter() call
-let frontmatterData: Record<string, unknown> = {}
+// #6: cache parsed frontmatter so onChangeCheckbox avoids a second parse
+let frontmatterString = ''
+let hasFrontmatter = false
 const contextView = ref<string>('')
 const isLoaded = ref<boolean>(false)
 const viewText = toRef(props, 'viewText')
@@ -326,11 +327,10 @@ const onChangeCheckbox = (taskIndex: number, checked: boolean) => {
         )
         const newContent = lines.join('\n')
         if (props.updatedViewText) {
-          // #6: use cached frontmatterData instead of re-parsing
-          const updatedFull =
-            Object.keys(frontmatterData).length > 0
-              ? matter.stringify(newContent, frontmatterData)
-              : newContent
+          // #6: use cached frontmatter string instead of re-parsing
+          const updatedFull = hasFrontmatter
+            ? `---\n${frontmatterString}\n---\n\n${newContent}`
+            : newContent
           props.updatedViewText(updatedFull)
         }
         return
@@ -385,9 +385,10 @@ watch(
   viewText,
   (val) => {
     // #6: parse once and cache both content and frontmatter
-    const parsed = matter(val)
-    content = parsed.content
-    frontmatterData = parsed.data
+    const parsed = fm(val)
+    content = parsed.body
+    frontmatterString = parsed.frontmatter ?? ''
+    hasFrontmatter = parsed.bodyBegin > 1
     if (content !== contextView.value) {
       contextView.value = content
       isLoaded.value = true
