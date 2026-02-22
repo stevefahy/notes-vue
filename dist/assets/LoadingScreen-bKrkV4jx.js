@@ -1,0 +1,1 @@
+import{_ as e,V as o}from"./index-BKOEqxfI.js";import{U as r,V as s,q as a,m as t}from"./vue-vendor-B0iHMfaN.js";import"./vuetify-vendor-BObCghBX.js";const c={},n={class:"loading_outer"},_={class:"loading_inner"};function d(i,l){return r(),s("div",n,[a("div",_,[t(o,{indeterminate:""})])])}const u=e(c,[["render",d],["__scopeId","data-v-66f14d19"]]);export{u as default};
