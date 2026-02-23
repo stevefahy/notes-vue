@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { watch, ref, toRef, defineAsyncComponent } from 'vue'
+import fm from 'front-matter'
 import type { ViewNoteThumb } from '@/core/model/global'
+import { truncateMarkdownPreview } from '@/core/lib/truncateMarkdownPreview'
 
 const ViewNoteMarkdown = defineAsyncComponent(() => import('./ViewNoteMarkdown.vue'))
 
@@ -21,7 +23,8 @@ const hideSkeleton = () => {
 watch(
   text,
   (val: string) => {
-    content = val
+    const { body: raw } = fm(val ?? '')
+    content = truncateMarkdownPreview(raw)
     hideSkeleton()
   },
   { deep: true, immediate: true }
