@@ -11,6 +11,7 @@ export const refreshtoken = async (): Promise<AuthAuthenticate> => {
     response = await fetch(ENV.VITE_API_ENDPOINT + `api/auth/refreshtoken`, {
       method: 'GET',
       credentials: 'include',
+      cache: 'no-store',
       headers: {
         'Content-Type': 'application/json'
       }

@@ -16,6 +16,7 @@ export const useAuthStore = defineStore('auth', () => {
   let interval: ReturnType<typeof setInterval>
   const AutoRefreshToken = () => {
     interval = setInterval(() => {
+      if (document.visibilityState === 'hidden') return
       if (!authContext.value.success) {
         autoLogout()
       } else {
@@ -25,6 +26,12 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   AutoRefreshToken()
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      setTimeout(() => verifyRefreshTokenWithRetry(), 500)
+    }
+  })
 
   const showNotification = (msg: string) => {
     notificationStore.ShowNotification({
@@ -104,29 +111,65 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  const getRefreshToken = async () => {
-    try {
-      const response = await refreshtoken()
-      if (!response) {
-        return
+  const verifyRefreshTokenWithRetry = async (retries = 3) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const response = await getRefreshToken()
+        if (response?.success) {
+          authContext.value = {
+            ...authContext.value,
+            success: response.success,
+            details: response.details,
+            token: response.token,
+            loading: false
+          }
+          return
+        }
+      } catch {
+        /* retry on next iteration */
       }
-      if (response.error) {
-        // showNotification(`${response.error}`)
-        return
+      if (i < retries - 1) {
+        await new Promise((r) => setTimeout(r, 1000))
       }
-      if (response.success) {
-        return response
-      }
-    } catch {
-      // showNotification(`${err}`)
-      return
     }
-    return
+    resetAuthContext()
+    autoLogout()
+  }
+
+  let refreshInProgress: Promise<Awaited<ReturnType<typeof refreshtoken>> | undefined> | null = null
+
+  const getRefreshToken = async () => {
+    if (refreshInProgress) {
+      return refreshInProgress
+    }
+    const promise = (async () => {
+      try {
+        const response = await refreshtoken()
+        if (!response) {
+          return
+        }
+        if (response.error) {
+          return
+        }
+        if (response.success) {
+          return response
+        }
+      } catch {
+        return
+      }
+      return
+    })()
+    refreshInProgress = promise
+    try {
+      return await promise
+    } finally {
+      refreshInProgress = null
+    }
   }
 
   const handleLogout = async () => {
     const context = await getRefreshToken()
-    if (context && context.token !== null) {
+    if (context?.token) {
       logoutHandler(context.token)
     }
   }
@@ -217,7 +260,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const getAuth = async () => {
     if (!authContext.value.token) {
-      await verifyRefreshToken()
+      await verifyRefreshTokenWithRetry()
     }
     return authContext
   }

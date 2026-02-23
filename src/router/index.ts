@@ -49,15 +49,17 @@ const router = createRouter({
   ]
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const authStore = useAuthStore()
-  if (to.meta.requiresAuth && !authStore.authGuardVerify()) {
-    // this route requires auth, check if logged in
-    // if not, redirect to login page.
-    return {
-      path: '/login',
-      // save the location we were at to come back later
-      query: { redirect: to.fullPath }
+  if (to.meta.requiresAuth) {
+    if (!authStore.authContext.token) {
+      await authStore.getAuth()
+    }
+    if (!authStore.authGuardVerify()) {
+      return {
+        path: '/login',
+        query: { redirect: to.fullPath }
+      }
     }
   }
 })
