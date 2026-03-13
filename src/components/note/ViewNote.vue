@@ -43,25 +43,52 @@ const updateViewText = (a: string) => {
     view: true,
     'view_split show': splitScreen,
     editnote_box: true,
-    show: visible,
-    hide: !visible
+    show: visible && !splitScreen,
+    hide: !visible && !splitScreen
   }">
-    <v-card>
-      <v-card-text class="cardcontent">
-        <article id="viewnote_id" class="viewnote_content viewer viewnote_content">
+    <div class="note-card">
+      <div class="v-card-text cardcontent viewnote_content">
+        <article id="viewnote_id" class="viewnote_content viewer">
           <template v-if="!isLoaded">
-            <v-skeleton-loader type="list-item"></v-skeleton-loader>
+            <div class="skeleton-placeholder" aria-hidden="true">
+              <div class="skeleton-line" />
+              <div class="skeleton-line" />
+              <div class="skeleton-line short" />
+            </div>
           </template>
           <template v-if="isLoaded">
-            <ViewNoteMarkdown :viewText="viewText" :updatedViewText="updateViewText"
-              :disableLinks="false" />
+            <ViewNoteMarkdown :viewText="viewText" :updatedViewText="updateViewText" :disableLinks="false" />
           </template>
         </article>
-      </v-card-text>
-    </v-card>
+      </div>
+    </div>
   </div>
 </template>
 
-<style>
+<style scoped>
 @import url('../../assets/styles/notebook-list-shared-css.scss');
+
+/* View pane: content flows on view background (var(--theme-bg)), no white card */
+.note-card {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.skeleton-placeholder {
+  padding: 8px 0;
+}
+
+.skeleton-line {
+  height: 12px;
+  background: var(--theme-border-input);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.skeleton-line.short {
+  width: 60%;
+}
 </style>

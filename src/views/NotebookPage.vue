@@ -19,11 +19,10 @@ import FooterView from '@/components/layout/FooterView.vue'
 import NoteList from '@/components/notebook/NoteList.vue'
 import AddNotebookForm from '@/components/notebooks/AddNotebookForm.vue'
 import SelectNotebookForm from '@/components/notebooks/SelectNotebookForm.vue'
-import { useMobileSizeStore } from '@/stores/mobileSize'
-import { storeToRefs } from 'pinia'
+import { useEditNotesStore } from '@/stores/editNotes'
+import { onUnmounted } from 'vue'
 
-const mobileSizeStore = useMobileSizeStore()
-const { btnSize } = storeToRefs(mobileSizeStore)
+const editNotesStore = useEditNotesStore()
 
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
@@ -183,6 +182,7 @@ const loadNotebooks = async () => {
 
 const updateSelected = (selected: SelectedNote) => {
   isSelected.value = selected
+  editNotesStore.set(editNotes.value, selected?.selected?.length ?? 0)
 }
 
 const moveNoteFormHandler = () => {
@@ -209,6 +209,7 @@ const addNoteFormHandler = () => {
 const editNoteFormHandler = () => {
   editNotes.value = true
   clearEditNotes.value = false
+  editNotesStore.set(true, 0)
 }
 
 const resetNotesSelected = () => {
@@ -223,7 +224,12 @@ const cancelEditNoteFormHandler = () => {
   editNotes.value = false
   clearEditNotes.value = true
   resetNotesSelected()
+  editNotesStore.clear()
 }
+
+onUnmounted(() => {
+  editNotesStore.clear()
+})
 
 const updateNotebookDate = (notebookId: string, notebookLatesDate: string) => {
   editNotebookDateHandler(notebookId, notebookLatesDate)
@@ -430,74 +436,62 @@ getAuth()
         <NoteList :notes="notes" :onNotesSelected="updateSelected" :onNotesEdit="editNotes"
           :onClearNotesEdit="clearEditNotes" />
       </template>
-      <template v-if="moveNote && userNotebooks">
-        <SelectNotebookForm :notebooks="userNotebooks" :moveNotes="moveNoteHandler" :onCancel="cancelHandler" />
-      </template>
-      <template v-if="enableEditNotebook">
-        <AddNotebookForm method="edit" :notebook="notebook" :editNotebook="editNotebookHandler"
-          :onCancel="cancelEditHandler" />
-      </template>
+      <SelectNotebookForm v-if="userNotebooks" :open="!!(moveNote && userNotebooks)" :notebooks="userNotebooks"
+        :currentNotebookId="(notebookId as string)" :moveNotes="moveNoteHandler" :onCancel="cancelHandler" />
+      <AddNotebookForm :open="enableEditNotebook" method="edit" :notebook="notebook" :editNotebook="editNotebookHandler"
+        :onCancel="cancelEditHandler" />
     </template>
   </div>
   <FooterView>
-    <template v-if="notebookLoaded && notesLoaded && !editNotes">
-      <v-btn :size="btnSize" rounded="xl" color="secondary" aria-label="Add note button"
-        class="contained medium breadcrumb_edit_fab button_fab" @click="addNoteFormHandler">
-        <span class="icon_text">
-          <span class="material-symbols-outlined button_icon white"> note_add </span>
-          Add Note
-        </span>
-      </v-btn>
-    </template>
-    <template v-if="notebookLoaded && notesLoaded && !editNotes && notes && notes!.length > 0">
-      <v-btn :size="btnSize" rounded="xl" color="secondary" aria-label="Edit Notes button"
-        class="contained medium breadcrumb_edit_fab button_fab" @click="editNoteFormHandler">
-        <span class="icon_text">
-          <span class="material-symbols-outlined button_icon white"> edit </span>
+    <div v-if="notebookLoaded && notesLoaded" class="nb-footer-row">
+      <template v-if="!editNotes">
+        <button v-if="notes && notes.length > 0" type="button" class="btn-action-ghost" aria-label="Edit Notes button"
+          @click="editNoteFormHandler">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="media_query_size">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
           Edit Notes
-        </span>
-      </v-btn>
-    </template>
-
-    <template v-if="notebookLoaded && notesLoaded && notes && notes!.length < 1">
-      <v-btn :size="btnSize" rounded="xl" color="secondary" aria-label="Delete Notebook button"
-        class="contained medium breadcrumb_edit_fab button_fab" @click="deleteNotebookHandler">
-        <span class="icon_text">
-          <span class="material-symbols-outlined button_icon white"> delete </span>
-          Delete Notebook
-        </span>
-      </v-btn>
-    </template>
-    <template v-if="
-      notebookLoaded && notesLoaded && editNotes && isSelected && isSelected!.selected.length > 0
-    ">
-      <v-btn rounded="xl" :size="btnSize" color="secondary" aria-label="Delete Note button"
-        class="contained medium breadcrumb_edit_fab button_fab" @click="deleteNoteHandler">
-        <span class="icon_text">
-          <span class="material-symbols-outlined button_icon white"> delete </span>
-          Delete
-        </span>
-      </v-btn>
-      <template v-if="userNotebooks && userNotebooks!.length > 1">
-        <v-btn :size="btnSize" rounded="xl" color="secondary" aria-label="Move Note button"
-          class="contained medium breadcrumb_edit_fab button_fab" @click="moveNoteFormHandler">
+        </button>
+        <button type="button" class="btn-action-primary" aria-label="Add note button" @click="addNoteFormHandler">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="media_query_size">
+            <path d="M6 1v10M1 6h10" stroke="white" stroke-width="2" stroke-linecap="round" />
+          </svg>
+          Add Note
+        </button>
+        <button v-if="notes && notes.length < 1" type="button" class="btn-action-danger"
+          aria-label="Delete Notebook button" @click="deleteNotebookHandler">
           <span class="icon_text">
-            <span class="material-symbols-outlined button_icon white symbol_size">
-              flip_to_front
-            </span>
-            Move
+            <span class="material-symbols-outlined button_icon danger">delete</span>
+            Delete Notebook
           </span>
-        </v-btn>
+        </button>
       </template>
-    </template>
-    <template v-if="notebookLoaded && notesLoaded && editNotes">
-      <v-btn :size="btnSize" rounded="xl" color="secondary" aria-label="Cancel Note button"
-        class="contained medium breadcrumb_edit_fab button_fab" @click="cancelEditNoteFormHandler">
-        <span class="icon_text">
-          <span class="material-symbols-outlined button_icon white"> cancel </span>
-          Cancel
-        </span>
-      </v-btn>
-    </template>
+      <template v-else>
+        <button v-if="isSelected && isSelected.selected.length > 0" type="button" class="btn-action-danger"
+          aria-label="Delete Note button" @click="deleteNoteHandler">
+          <span class="icon_text">
+            <span class="material-symbols-outlined button_icon danger media_query_size">delete</span>
+            Delete
+          </span>
+        </button>
+        <button v-if="isSelected && isSelected.selected.length > 0 && userNotebooks && userNotebooks.length > 1"
+          type="button" class="btn-action-ghost" aria-label="Move Note button" @click="moveNoteFormHandler">
+          <span class="icon_text">
+            <span class="material-symbols-outlined button_icon green symbol_size media_query_size">flip_to_front</span>
+            Move to…
+          </span>
+        </button>
+        <button type="button" class="btn-action-ghost" aria-label="Cancel Note button"
+          @click="cancelEditNoteFormHandler">
+          <span class="icon_text">
+            <span class="material-symbols-outlined button_icon green media_query_size">cancel</span>
+            Cancel
+          </span>
+        </button>
+      </template>
+    </div>
   </FooterView>
 </template>

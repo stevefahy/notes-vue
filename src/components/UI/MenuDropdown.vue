@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { IAuthDetails, IAuthContext } from '@/core/model/global'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import APPLICATION_CONSTANTS from '@/core/application-constants/application-constants'
@@ -9,93 +9,77 @@ const AC = APPLICATION_CONSTANTS
 const authStore = useAuthStore()
 const router = useRouter()
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-let loading: boolean | null
-let success: boolean | null
-let details: IAuthDetails | null
-let onLogout: () => void
+const open = ref(false)
+const rippleKey = ref(0)
 
-authStore.$subscribe((mutation, state) => {
-  updateContext(state.authContext)
+const success = computed(() => authStore.authContext?.success)
+
+const toggleMenu = () => {
+  open.value = !open.value
+  rippleKey.value++
+}
+
+const handleProfile = () => {
+  open.value = false
+  router.push('/profile')
+}
+
+const loginHandler = () => {
+  open.value = false
+  router.push(AC.LOGIN_PAGE)
+}
+
+const handleLogout = () => {
+  open.value = false
+  const ctx = authStore.authContext
+  if (ctx?.onLogout) ctx.onLogout()
+}
+
+const handleClickOutside = (e: Event) => {
+  const target = e.target as Element
+  if (open.value && target && !target.closest('.dropdown')) {
+    open.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
 })
-
-const updateContext = (context: IAuthContext) => {
-  loading = context.loading
-  success = context.success
-  details = context.details
-  onLogout = context.onLogout
-}
-
-const handleProfile = async (event: Event) => {
-  event.preventDefault()
-  router.push(`/profile`)
-}
-
-const loginHandler = async (event: Event) => {
-  event.preventDefault()
-  router.push(`${AC.LOGIN_PAGE}`)
-}
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <template>
   <div class="nav_menu">
-    <v-menu>
-      <template v-slot:activator="{ props }">
-        <v-btn
-          fab
-          variant="text"
-          size="small"
-          class="icon more_vert"
-          v-bind="props"
-          icon="more_vert"
-        >
-          <v-icon fab>more_vert</v-icon>
-        </v-btn>
-      </template>
+    <div class="dropdown">
+      <button type="button" class="icon profile-trigger" :class="{ 'is-active': open }" aria-haspopup="true"
+        :aria-expanded="open" @click="toggleMenu" @keydown.escape="open = false">
+        <span v-if="rippleKey > 0" :key="rippleKey" class="ripple-burst" />
+        <span class="material-icons-outlined menu_item">person</span>
+      </button>
 
-      <v-list>
-        <v-list-item
-          v-if="success && details"
-          prepend-icon="account_circle"
-          @click="handleProfile($event)"
-        >
-          <v-list-item-title>{{ details.username }}</v-list-item-title>
-        </v-list-item>
-        <v-list-item v-if="success" prepend-icon="settings" @click="handleProfile($event)">
-          <v-list-item-title>Settings</v-list-item-title>
-        </v-list-item>
-        <v-list-item v-if="!success" prepend-icon="login" @click="loginHandler($event)">
-          <v-list-item-title>Login</v-list-item-title>
-        </v-list-item>
-        <v-list-item v-if="success" prepend-icon="logout" @click="onLogout()">
-          <v-list-item-title>logout</v-list-item-title>
-        </v-list-item>
-      </v-list>
-    </v-menu>
+      <Transition name="dropdown-slide">
+        <div v-if="open" class="dropdown-menu" role="menu">
+          <button v-if="success" type="button" class="dropdown-item" role="menuitem" @click="handleProfile">
+            <span class="material-icons-outlined menu_item">person</span>
+            Profile
+          </button>
+          <button v-if="!success" type="button" class="dropdown-item" role="menuitem" @click="loginHandler">
+            <span class="material-symbols-outlined menu_item">login</span>
+            Sign in
+          </button>
+          <button v-if="success" type="button" class="dropdown-item" role="menuitem" @click="handleLogout">
+            <span class="material-symbols-outlined menu_item danger_icon">logout</span>
+            Sign out
+          </button>
+        </div>
+      </Transition>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.icon {
-  color: white !important;
-}
-
-.icon .material-icons {
-  color: white;
-}
-
-.icon i.material-icons {
-  color: white;
-}
-
-.icon .v-btn__content .material-icons {
-  color: white !important;
-}
-
-.icon span .material-icons {
-  color: white !important;
-}
-
 .nav_menu {
   padding-right: 16px;
 }

@@ -1,209 +1,305 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import type { SelectNotebookFormProps, Notebook, AlertInterface } from '@/core/model/global'
-import { useMobileSizeStore } from '@/stores/mobileSize'
-import { storeToRefs } from 'pinia'
-
-const mobileSizeStore = useMobileSizeStore()
-const { btnSize } = storeToRefs(mobileSizeStore)
+import { ref, computed, watch } from 'vue'
+import type { SelectNotebookFormProps } from '@/core/model/global'
+import { mapLegacyCover } from '@/core/lib/folder-options'
 
 const props = defineProps<SelectNotebookFormProps>()
 
-const route = useRoute()
-
-const dialog = ref(true)
-const notebookId = route.params.notebookId
-
 const selectedNotebook = ref<string>('')
-const formIsValid = ref<boolean>(false)
-const notebooksSorted = ref<Notebook[] | null>(null)
-const error = ref<AlertInterface>({
-  error_state: false,
-  error_severity: '',
-  message: ''
+
+const formIsValid = computed(
+  () => selectedNotebook.value !== '' && selectedNotebook.value !== 'default'
+)
+
+const notebooksFiltered = computed(() => {
+  const copy = [...props.notebooks]
+  copy.sort((a, b) => {
+    const aDate =
+      a.updatedAt === 'No date' || !a.updatedAt ? 'December 17, 1995' : a.updatedAt
+    const bDate =
+      b.updatedAt === 'No date' || !b.updatedAt ? 'December 17, 1995' : b.updatedAt
+    return new Date(aDate) > new Date(bDate) ? -1 : 1
+  })
+  return copy.filter((n) => n._id !== props.currentNotebookId)
 })
 
-const findNotebook = (notebook_id: string) => {
-  const index = props.notebooks.findIndex((x) => x._id === notebook_id)
-  return props.notebooks[index]
+const visible = ref(props.open !== false)
+const closeWithAnimation = () => {
+  visible.value = false
+}
+const onAfterLeave = () => {
+  props.onCancel()
 }
 
-const sortNotes = (notebooks: Notebook[]) => {
-  // Add an update date for sorting if one does not exist
-  notebooks.forEach((x) => {
-    if (x.updatedAt === 'No date' || undefined) {
-      x.updatedAt = 'December 17, 1995 03:24:00'
-    }
-    if (x.createdAt === 'No date' || undefined) {
-      x.createdAt = 'December 17, 1995 03:24:00'
-    }
-  })
-  notebooks
-    .sort((a, b) => {
-      if (a.updatedAt !== undefined && b.updatedAt !== undefined) {
-        return new Date(a.updatedAt) > new Date(b.updatedAt) ? 1 : -1
-      } else {
-        return a.updatedAt !== undefined ? 1 : -1
-      }
-    })
-    .reverse()
-  return notebooks
-}
+watch(() => props.open, (val) => {
+  visible.value = val !== false
+})
 
 const cancelHandler = (event: Event) => {
   event.preventDefault()
   event.stopPropagation()
-  if (error.value.error_state) {
-    resetError()
-  }
-  dialog.value = false
-  props.onCancel()
+  closeWithAnimation()
 }
 
 const submitHandler = async (event: Event) => {
   event.preventDefault()
   event.stopPropagation()
-  if (error.value.error_state) {
-    resetError()
-  }
-  findNotebook(selectedNotebook.value)
-  if (!selectedNotebook.value) {
-    formIsValid.value = false
-    return
-  }
+  if (!selectedNotebook.value || !formIsValid.value) return
   props.moveNotes(selectedNotebook.value)
-  dialog.value = false
-  props.onCancel()
+  closeWithAnimation()
 }
 
-const resetError = () => {
-  formIsValid.value = true
-  error.value = {
-    error_state: false,
-    error_severity: '',
-    message: ''
+const handleOverlayClick = (e: Event) => {
+  if ((e.target as HTMLElement).classList.contains('sheet-overlay')) {
+    cancelHandler(e)
   }
 }
 
-watch(selectedNotebook, (newValue) => {
-  if (newValue === '' || newValue === 'default') {
-    formIsValid.value = false
-  } else {
-    formIsValid.value = true
+const handleKeydown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape') cancelHandler(e as unknown as Event)
+  if (e.key === 'Enter' || e.key === ' ') {
+    if ((e.target as Element).closest('.bottom-sheet')) return
+    e.preventDefault()
+    cancelHandler(e as unknown as Event)
   }
-})
-
-if (props.notebooks) {
-  const sorted = sortNotes(props.notebooks)
-  notebooksSorted.value = sorted
 }
+
+const getDisplayCover = (cover: string) => mapLegacyCover(cover)
 </script>
 
 <template>
-  <v-dialog v-model="dialog" width="auto">
-    <v-card>
-      <v-card-text>
-        <div class="dialogue_container">
-          <h2 class="dialogue-title">Move to Notebook</h2>
-          <form class="form">
-            <div class="control">
-              <label for="new-notebook-cover">Name</label>
-              <select name="notebooks" id="notebooks" v-model="selectedNotebook">
-                <option disabled value="">Select a notebook...</option>
-                <template v-for="notebook of notebooksSorted">
-                  <template v-if="notebook._id !== notebookId">
-                    <option :key="notebook._id" :value="notebook._id">
-                      {{ notebook.notebook_name }}
-                    </option>
-                  </template>
-                </template>
-              </select>
-            </div>
-          </form>
-          <div class="button_row">
-            <div class="action">
-              <div class="move">
-                <v-btn :size="btnSize" :disabled="!formIsValid" color="secondary" aria-label="Move Note button"
-                  class="contained medium" @click="submitHandler($event)">
-                  Move Note
-                </v-btn>
-              </div>
-              <div class="cancel">
-                <v-btn :size="btnSize" color="secondary" aria-label="Cancel button" class="contained medium"
-                  @click="cancelHandler($event)">
-                  <span class="icon_text">
-                    <span class="material-symbols-outlined button_icon white"> cancel </span>
-                    Cancel
-                  </span>
-                </v-btn>
-              </div>
+  <Teleport to="body">
+    <Transition name="sheet" :duration="{ enter: 380, leave: 300 }" @after-leave="onAfterLeave">
+      <div v-if="visible" class="sheet-overlay" role="button" tabindex="0" aria-label="Close dialog"
+        @click="handleOverlayClick" @keydown="handleKeydown">
+        <div class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="move-notebook-title" @click.stop>
+          <div class="sheet-handle" />
+          <h2 id="move-notebook-title" class="sheet-title">Move to Notebook</h2>
+
+          <div class="sheet-field">
+            <span class="form-label" id="notebook-options-label">Notebook</span>
+            <div class="notebook-options" role="listbox" aria-labelledby="notebook-options-label">
+              <button v-for="nb in notebooksFiltered" :key="nb._id" type="button" class="notebook-option"
+                :class="{ selected: selectedNotebook === nb._id }" role="option"
+                :aria-selected="selectedNotebook === nb._id" @click="selectedNotebook = nb._id">
+                <span :class="['option-cover', `option-cover-${getDisplayCover(nb.notebook_cover)}`]">
+                  <span :class="['nb-spine', `nb-spine-${getDisplayCover(nb.notebook_cover)}`]" />
+                </span>
+                <span class="option-name">{{ nb.notebook_name }}</span>
+              </button>
             </div>
           </div>
-          <template v-if="error.error_state">
-            <ErrorAlert :error_severity="error.error_severity" :error_state="error.error_state"
-              :message="error.message" />
-          </template>
+
+          <div class="sheet-actions">
+            <button type="button" class="btn-cancel" aria-label="Cancel button" @click="closeWithAnimation">
+              Cancel
+            </button>
+            <button type="button" class="btn-move" :disabled="!formIsValid" aria-label="Move Note button"
+              @click="submitHandler">
+              Move Note
+            </button>
+          </div>
         </div>
-      </v-card-text>
-    </v-card>
-  </v-dialog>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
-.button_row {
-  width: 100%;
-}
-
-.form {
-  width: 100%;
-  margin: 1rem auto;
-}
-
-.control {
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(8, 18, 12, 0.45);
+  backdrop-filter: blur(4px);
   display: flex;
-  margin-bottom: 0.5rem;
-  flex-direction: row;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 5px;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
 }
 
-.control label {
-  font-weight: bold;
-  margin-bottom: 0.5rem;
-  color: #353336;
-  display: block;
-}
-
-.control input {
-  display: block;
-  font: inherit;
-  max-width: 100%;
-  width: 200px;
-  border-radius: 4px;
-  border: 1px solid #38015c;
-  padding: 0.25rem;
-  background-color: #f7f0fa;
-}
-
-.action {
+.bottom-sheet {
+  background: var(--theme-surface);
+  border-radius: 22px 22px 0 0;
+  padding: 8px 0 32px;
   width: 100%;
+  outline: none;
+  box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.12);
+}
+
+@media (min-width: 768px) {
+  .bottom-sheet {
+    max-width: 420px;
+  }
+}
+
+.sheet-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--theme-border-input);
+  border-radius: 2px;
+  margin: 8px auto 20px;
+}
+
+.sheet-title {
+  font-family: var(--theme-font-serif);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--theme-text);
+  padding: 0 20px;
+  margin: 0 0 18px;
+}
+
+.sheet-field {
+  padding: 0 20px;
+  margin-bottom: 14px;
+}
+
+.form-label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--theme-text-secondary);
+  margin-bottom: 6px;
+}
+
+.notebook-options {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px 0;
 }
 
-.dialogue_container {
-  max-width: 300px;
+.notebook-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--theme-input-bg);
+  border: 1.5px solid var(--theme-border-input);
+  border-radius: var(--theme-radius-sm);
+  font-family: var(--theme-font-sans);
+  font-size: 14px;
+  color: var(--theme-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-@media only screen and (max-width: 380px) {
-  .control {
-    gap: 5px;
-  }
+.notebook-option:hover {
+  border-color: var(--theme-green);
+}
 
-  .control input {
-    font-size: 0.7rem !important;
-  }
+.notebook-option.selected {
+  border-color: var(--theme-green);
+  box-shadow: 0 0 0 2px rgba(46, 125, 82, 0.2);
+}
+
+.option-cover {
+  width: 24px;
+  min-width: 24px;
+  height: 28px;
+  border-radius: 5px;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.option-cover-forest {
+  background: var(--notebook-forest);
+}
+
+.option-cover-emerald {
+  background: var(--notebook-emerald);
+}
+
+.option-cover-lime {
+  background: var(--notebook-lime);
+}
+
+.option-cover-sage {
+  background: var(--notebook-sage);
+}
+
+.nb-spine {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+
+.nb-spine-forest {
+  background: var(--notebook-emerald-color);
+}
+
+.nb-spine-emerald {
+  background: var(--notebook-lime-color);
+}
+
+.nb-spine-lime {
+  background: var(--notebook-sage-color);
+}
+
+.nb-spine-sage {
+  background: var(--notebook-forest-color);
+}
+
+.option-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sheet-actions {
+  display: flex;
+  gap: 10px;
+  padding: 6px 20px 0;
+  margin-top: 4px;
+}
+
+.btn-cancel {
+  flex: 1;
+  background: var(--theme-bg);
+  color: var(--theme-text);
+  border: 1px solid var(--theme-border-input);
+  border-radius: var(--theme-radius-sm);
+  padding: 13px;
+  font-family: var(--theme-font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-cancel:hover {
+  background: #e8f4ec;
+}
+
+.btn-move {
+  flex: 1;
+  background: var(--theme-green);
+  color: white;
+  border: none;
+  border-radius: var(--theme-radius-sm);
+  padding: 13px;
+  font-family: var(--theme-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--theme-shadow-btn);
+}
+
+.btn-move:hover:not(:disabled) {
+  background: var(--theme-green-accent);
+}
+
+.btn-move:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

@@ -1,0 +1,1 @@
+import{_ as o}from"./index-BKGDsULE.js";import{C as s,D as t,e as a,P as r}from"./vue-vendor-BsQwDEPG.js";const c={},n={class:"page_footer"},_={class:"page_footer_container"};function d(e,f){return s(),t("div",n,[a("div",_,[r(e.$slots,"default",{},void 0)])])}const p=o(c,[["render",d],["__scopeId","data-v-101da25f"]]);export{p as F};

@@ -1,46 +1,50 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed } from 'vue'
 import type { Notebook } from '@/core/model/global'
 import DateFormat from '@/core/lib/date-format'
+import { mapLegacyCover } from '@/core/lib/folder-options'
 
-const props = defineProps(['notebookLoaded', 'notebook_item'])
+const props = defineProps<{
+  notebookLoaded: boolean
+  notebook_item: Notebook | null
+}>()
 
-const notebook_item$ = ref<Notebook | null>(props.notebook_item)
-const notebookLoadedRef = props.notebookLoaded
+const displayCover = computed(() => {
+  if (!props.notebookLoaded || !props.notebook_item?.notebook_cover) return 'loading'
+  return mapLegacyCover(props.notebook_item.notebook_cover)
+})
+
+const tabClass = computed(() => `tab_${displayCover.value}`)
+const spineClass = computed(() => `nb-spine-${displayCover.value}`)
 
 const dateFormat = DateFormat
 </script>
 
 <template>
   <li class="notebooks_list_bg">
-    <v-card>
-      <v-card-text class="cardcontent">
-        <div class="notebooks_list_outer">
-          <div
-            class="notebooks_list_left"
-            :class="!notebookLoadedRef ? '' : 'tab_' + notebook_item$!.notebook_cover"
-          >
-            <div v-if="!notebookLoadedRef">
-              <v-skeleton-loader type="card" height="10px"></v-skeleton-loader>
-            </div>
-          </div>
-          <div class="notebooks_list_right">
-            <template v-if="!notebookLoadedRef">
-              <v-skeleton-loader type="list-item"></v-skeleton-loader>
-              <v-skeleton-loader type="list-item"></v-skeleton-loader>
-            </template>
-            <template v-if="notebookLoadedRef">
-              <div>{{ notebook_item$!.notebook_name }}</div>
-              <div class="date_format">
-                <div>
-                  {{ dateFormat(notebook_item!.updatedAt!) }}
-                </div>
-              </div>
-            </template>
-          </div>
+    <div class="vcard">
+      <div class="cardcontent"></div>
+      <div class="notebooks_list_outer">
+        <div class="notebooks_list_left" :class="tabClass">
+          <div :class="spineClass" />
         </div>
-      </v-card-text>
-    </v-card>
+        <div class="notebooks_list_right">
+          <template v-if="!notebookLoaded">
+            <div class="loading-placeholder">Loading...</div>
+          </template>
+          <template v-else-if="notebook_item">
+            <div>{{ notebook_item.notebook_name }}</div>
+            <div class="date_format">
+              {{ dateFormat(notebook_item.updatedAt ?? '') }}
+            </div>
+          </template>
+        </div>
+        <span v-if="notebookLoaded && notebook_item?.noteCount !== undefined" class="nb-count">
+          {{ notebook_item.noteCount }} {{ notebook_item.noteCount === 1 ? 'note' : 'notes' }}
+        </span>
+        <div class="notebooks_list_arrow">›</div>
+      </div>
+    </div>
   </li>
 </template>
 

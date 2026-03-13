@@ -21,10 +21,10 @@ const hideSkeleton = () => {
 
 <template>
   <template v-if="!notebookLoaded">
-    <NotebookListHtml notebook_item="null" :notebookLoaded="notebookLoaded" />
+    <NotebookListHtml :notebook_item="null" :notebookLoaded="notebookLoaded" />
   </template>
   <template v-if="notebookLoaded">
-    <router-link :to="'/notebook/' + notebook_item._id">
+    <router-link :to="'/notebook/' + notebook_item._id" class="notebook-link">
       <NotebookListHtml :notebook_item="notebook_item" :notebookLoaded="notebookLoaded" />
     </router-link>
   </template>

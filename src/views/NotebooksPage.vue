@@ -98,11 +98,8 @@ getAuth()
   </div>
   <div class="page_scrollable_header_breadcrumb_footer_list">
     <div v-if="notebooksLoaded && userNotebooks.notebooks">
-      <NotebooksList
-        :error="userNotebooks.error"
-        :success="userNotebooks.success"
-        :notebooks="userNotebooks.notebooks"
-      />
+      <NotebooksList :error="userNotebooks.error" :success="userNotebooks.success"
+        :notebooks="userNotebooks.notebooks" />
     </div>
   </div>
 </template>

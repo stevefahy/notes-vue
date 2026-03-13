@@ -1,186 +1,115 @@
 <script setup lang="ts">
-import { watch, ref } from 'vue'
-import type { NotesProps, Note, CheckedNote, SelectedNote } from '@/core/model/global'
-import ViewNoteThumb from '../note/ViewNoteThumb.vue'
+import { ref, watch } from 'vue'
+import type { NotesProps } from '@/core/model/global'
+import { extractNoteTitle, detectNoteTag } from '@/core/lib/noteCardUtils'
+import ViewNoteThumb from '@/components/note/ViewNoteThumb.vue'
 import DateFormat from '@/core/lib/date-format'
+import { useEditNotesStore } from '@/stores/editNotes'
 
 const props = defineProps<NotesProps>()
 
-const dateFormat = DateFormat
+const editNotesStore = useEditNotesStore()
 
-const userNotes = ref<Note[]>(props.notes)
-const isChecked = ref<CheckedNote[]>([])
-const isSelected = ref<SelectedNote>({ selected: [] })
+const isChecked = ref<Record<string, boolean>>({})
+let prevClearNotesEdit = false
 
-const inputRefs = ref<Record<string, HTMLInputElement>>({})
-
-watch(isSelected, (newVal) => {
-  props.onNotesSelected(newVal)
-})
-
-if (props.notes) {
-  const props_notes = props.notes
-  if (props_notes) {
-    // Set the initial notes array
-    userNotes.value = props_notes
-    const newarray: CheckedNote[] = []
-    props_notes.forEach((note) => {
-      // Set the checkboxes initial value to false
-      const newnote = { id: note._id, selected: false }
-      newarray.push(newnote)
-      return newarray
-    })
-    isChecked.value = newarray
-  }
-}
-
-const updateCheckbox = (checked_id: string, checked: boolean) => {
-  const prev = [...isChecked.value]
-  const newarray: CheckedNote[] = prev
-  const is = isChecked.value?.findIndex((x) => x.id === checked_id)
-  if (is >= 0 && newarray.length > 0) {
-    newarray[is].selected = checked
-  }
-  isChecked.value = newarray
-  const newarrayS: SelectedNote = { selected: [] }
-  isChecked.value?.forEach((x) => {
-    if (x.selected) {
-      newarrayS.selected.push(x.id)
+watch(
+  () => props.onClearNotesEdit,
+  (now) => {
+    if (now && !prevClearNotesEdit) {
+      isChecked.value = {}
+      props.onNotesSelected?.({ selected: [] })
+      editNotesStore.set(false, 0)
     }
-  })
-  isSelected.value = newarrayS
+    prevClearNotesEdit = !!now
+  }
+)
+
+const updateCheckbox = (noteId: string, checked: boolean) => {
+  isChecked.value = { ...isChecked.value, [noteId]: checked }
+  const selected = Object.entries(isChecked.value)
+    .filter(([, v]) => v)
+    .map(([k]) => k)
+  props.onNotesSelected?.({ selected })
+  editNotesStore.set(!!props.onNotesEdit, selected.length)
 }
 
-const checkboxStatus = (event: Event) => {
-  const target = event.currentTarget! as HTMLInputElement
-  const { checked } = target
-  const checked_id = target.value
-  updateCheckbox(checked_id, checked)
-}
-
-const divStatus = (id: string) => {
-  const target: HTMLInputElement = inputRefs.value[id]
-  let { checked } = target
-  const checked_id = target.value
-  target.checked = !checked
-  checked = target.checked
-  updateCheckbox(checked_id, checked)
-}
-
-const NoteLinkHandler = (event: Event) => {
+const handleCardClick = (noteId: string) => {
   if (props.onNotesEdit) {
-    event.preventDefault()
+    updateCheckbox(noteId, !isChecked.value[noteId])
   }
 }
 
-const EditLinkHandler = (noteid: string) => {
-  if (props.onNotesEdit) {
-    divStatus(noteid)
+const handleCardKeydown = (noteId: string, e: KeyboardEvent) => {
+  if (props.onNotesEdit && (e.key === 'Enter' || e.key === ' ')) {
+    e.preventDefault()
+    updateCheckbox(noteId, !isChecked.value[noteId])
   }
+}
+
+const getTagLabel = (tag: string) => {
+  const labels: Record<string, string> = {
+    todo: 'Todo',
+    table: 'Table',
+    code: 'Code',
+    image: 'Image',
+    list: 'List',
+    text: 'Text',
+    empty: 'Empty'
+  }
+  return labels[tag] ?? 'Empty'
 }
 </script>
 
-<template v-if="userNotes">
-  <ul class="notes_list">
-    <li class="notebook_list_bg" v-for="note in userNotes" :key="note._id">
-      <div class="thumb_outer">
-        <router-link @click="NoteLinkHandler" :to="'/notebook/' + note.notebook + '/' + note._id"
-          class="thumb_outer_link">
-          <div class="thumb_outer_link">
-            <div :id="note._id" class="edit_link" @click="EditLinkHandler(note._id)">
-              <v-card class="note_list_card">
-                <v-card-text class="cardcontent">
-                  <div class="thumb_image">
-                    <ViewNoteThumb :text="note.note" />
+<template>
+  <div class="notebooks-list-wrap">
+    <h2 class="page-heading">Your Notes</h2>
+    <div class="notes-list-container">
+      <ul class="notes_list">
+        <li v-for="note in props.notes" :key="note._id" class="note-card-outer">
+          <router-link v-if="!props.onNotesEdit" :to="`/notebook/${note.notebook}/${note._id}`"
+            class="note-card-link-overlay" aria-label="Open note" />
+          <div :role="props.onNotesEdit ? 'button' : undefined" :tabindex="props.onNotesEdit ? 0 : undefined"
+            class="note-card-link" @click="props.onNotesEdit ? handleCardClick(note._id) : undefined"
+            @keydown="props.onNotesEdit ? (e: KeyboardEvent) => handleCardKeydown(note._id, e) : undefined">
+            <div class="note-card" :class="{ 'note-card--selected': isChecked[note._id] }">
+              <div class="note-select-col-wrapper" :class="{ 'is-visible': props.onNotesEdit }">
+                <div class="note-select-col" role="checkbox" :tabindex="props.onNotesEdit ? 0 : -1"
+                  :aria-checked="!!isChecked[note._id]" @click.stop="handleCardClick(note._id)"
+                  @keydown="handleCardKeydown(note._id, $event)">
+                  <div class="sel-circle" :class="{ 'sel-circle--active': isChecked[note._id] }">
+                    <svg v-if="isChecked[note._id]" width="10" height="8" viewBox="0 0 10 8" fill="none"
+                      aria-hidden="true">
+                      <path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.6" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    </svg>
                   </div>
-                  <div class="date_format date_format_notes">
-                    {{ dateFormat(note.updatedAt!) }}
-                  </div>
-                </v-card-text>
-              </v-card>
+                </div>
+              </div>
+
+              <div class="note-card-body">
+                <div class="note-title">{{ extractNoteTitle(note.note) }}</div>
+                <div class="note-thumb-preview">
+                  <ViewNoteThumb :text="note.note" />
+                </div>
+                <div class="note-foot">
+                  <span class="note-date">{{ DateFormat(note.updatedAt ?? '') }}</span>
+                  <span :class="['note-tag', `tag-${detectNoteTag(note.note)}`]">
+                    {{ getTagLabel(detectNoteTag(note.note)) }}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-        </router-link>
-        <template v-if="onNotesEdit">
-          <div class="thumb_select_outer">
-            <div class="thumb_select">
-              <input :ref="el => { if (el) inputRefs[note._id] = el as HTMLInputElement }" :id="`input_${note._id}`"
-                type="checkbox" name="Status" :value="note._id" @change="checkboxStatus($event)" />
-            </div>
-          </div>
-        </template>
-      </div>
-    </li>
-  </ul>
+        </li>
+      </ul>
+    </div>
+  </div>
 </template>
 
 <style scoped>
-.cardcontent {
-  padding: 0 16px !important;
-}
-
-.notes_list {
-  list-style: none;
-  margin-block-start: 0em;
-  padding-inline-start: 0px;
-  padding-left: 10px;
-  padding-right: 10px;
-  margin-bottom: 16px;
-}
-
-.notes_list li {
-  padding-top: 10px;
-}
-
-.notebook_list_bg {
-  position: relative;
-}
-
-.thumb_select {
-  position: absolute;
-  right: 10px;
-  top: 15px;
-  z-index: 1000;
-}
-
-.thumb_select_outer {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-}
-
-.note_list_card:hover {
-  background-color: #f7f7f7;
-}
-
-.thumb_image {
-  min-height: calc(var(--viewnotethumb-box-min-height) * 1px);
-  min-height: 45px;
-  max-height: 300px;
-  overflow-y: hidden;
-  width: 100%;
-  padding: 0;
-  margin: 0;
-}
-
-.thumb_outer_link {
-  cursor: pointer;
-  width: 100%;
-}
-
-.thumb_outer {
-  display: flex;
-  width: 100%;
-  flex-direction: row;
-  align-items: flex-start;
-  min-height: 81px;
-}
-
-.thumb_outer a {
-  width: 100%;
-}
-
-.thumb_outer .edit_link {
-  width: 100%;
+.note-card--selected {
+  border-color: var(--theme-green);
+  box-shadow: 0 0 0 2px var(--theme-lime-light);
 }
 </style>

@@ -93,7 +93,7 @@ md.use(markdownItAttrs, {
 md.use(markdownItTaskCheckbox, {
   disabled: false,
   divWrap: true,
-  divClass: 'checkbox',
+  divClass: 'custom-checkbox',
   idPrefix: 'cbx_',
   ulClass: 'task-list',
   liClass: 'task-list-item'
@@ -408,16 +408,6 @@ watch(
 </template>
 
 <style scoped>
-.task-list input[type="checkbox"] {
-  cursor: pointer;
-  margin-right: 0.25em;
-}
-
-.md-readonly .task-list input[type="checkbox"] {
-  pointer-events: none;
-  cursor: default;
-}
-
 .codebox pre {
   box-shadow: rgba(0, 0, 0, 0.4) 1.95px 1.95px 2.6px;
 }

@@ -13,11 +13,6 @@ import useWindowDimensions from '../core/lib/useWindowDimension'
 import { initScrollSync, removeScrollListeners } from '../core/lib/scroll_sync'
 import ViewNote from '../components/note/ViewNote.vue'
 import EditNote from '@/components/note/EditNote.vue'
-import { useMobileSizeStore } from '@/stores/mobileSize'
-import { storeToRefs } from 'pinia'
-
-const mobileSizeStore = useMobileSizeStore()
-const { btnSize } = storeToRefs(mobileSizeStore)
 
 const authStore = useAuthStore()
 const notebookEditStore = useNotebookEditStore()
@@ -74,6 +69,8 @@ setTimeout(() => {
 if (noteId === 'create-note') {
   new_note = true
   isCreate.value = true
+  isView.value = false
+} else {
   isView.value = true
 }
 
@@ -94,7 +91,6 @@ watch(windowDimensions, (newVal) => {
 watch(autoSave, (newVal) => {
   if (newVal) {
     saveNoteCheck()
-    showSnack()
   }
 })
 
@@ -170,6 +166,7 @@ const saveNoteCheck = async () => {
   if (autoSave.value && isChanged.value && (isView.value || isChanged.value) && !isCreate.value) {
     const noteSaved = async () => {
       await saveNoteCallback()
+      showSnack()
       autoSave.value = false
       isChanged.value = false
       router.push(`${navigationUrl}`)
@@ -199,6 +196,7 @@ const saveNoteCallback = async () => {
         isChanged.value = false
         autoSave.value = false
         originalText.value = viewText.value
+        showSnack()
         // Change to View Mode
         if (isView.value) {
           toggleEditHandlerCallback()
@@ -310,131 +308,81 @@ getAuth()
 
   <div class="page_scrollable_header_breadcrumb_footer">
     <template v-if="noteLoaded && token !== null">
-      <div class="view_container" id="view_container">
-        <ViewNote
-          :visible="!isView"
-          :splitScreen="isSplitScreen"
-          :viewText="viewText"
-          :updatedViewText="updatedViewTextHandler"
-        />
-        <EditNote
-          :visible="isView"
-          :splitScreen="isSplitScreen"
-          :loadedText="loadedText"
-          :updateViewText="updatedViewTextHandler"
-          :passUpdatedViewText="updateEditTextProp"
-        />
+      <div class="view_container" :class="{ editnote_box_split: isSplitScreen }" id="view_container">
+        <EditNote :visible="!isView || isSplitScreen" :splitScreen="isSplitScreen" :loadedText="loadedText"
+          :updateViewText="updatedViewTextHandler" :passUpdatedViewText="updateEditTextProp" />
+        <ViewNote :visible="isView || isSplitScreen" :splitScreen="isSplitScreen" :viewText="viewText"
+          :updatedViewText="updatedViewTextHandler" />
       </div>
     </template>
   </div>
   <FooterView>
-    <template v-if="noteLoaded && viewText.length > 0 && !isCreate && isChanged">
-      <v-btn
-        :size="btnSize"
-        rounded="xl"
-        mat-button
-        color="secondary"
-        aria-label="Save Note button"
-        class="contained medium breadcrumb_edit_fab button_fab"
-        @click="saveNoteCallback"
-      >
-        <span class="icon_text">
-          <span class="material-symbols-outlined button_icon white"> add_circle </span>
+    <div v-if="noteLoaded" class="nb-footer-row">
+      <template v-if="viewText.length > 0 && !isCreate && isChanged">
+        <button type="button" class="btn-action-primary" aria-label="Save Note button" @click="saveNoteCallback">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+          </svg>
           Save Note
-        </span>
-      </v-btn>
-    </template>
-
-    <template v-if="noteLoaded && viewText.length > 0 && isCreate">
-      <v-btn
-        :size="btnSize"
-        rounded="xl"
-        mat-button
-        color="secondary"
-        aria-label="Create Note button"
-        class="contained medium breadcrumb_edit_fab button_fab"
-        @click="createNotePost"
-      >
-        <span class="icon_text">
-          <span class="material-symbols-outlined button_icon white"> add_circle </span>
+        </button>
+      </template>
+      <template v-if="viewText.length > 0 && isCreate">
+        <button type="button" class="btn-action-primary" aria-label="Create Note button" @click="createNotePost">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+            <path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          </svg>
           Create Note
-        </span>
-      </v-btn>
-    </template>
-
-    <template v-if="noteLoaded && viewText.length === 0 && isCreate">
-      <v-btn
-        :size="btnSize"
-        rounded="xl"
-        mat-button
-        color="secondary"
-        aria-label="Example Note button"
-        class="contained medium breadcrumb_edit_fab button_fab example_button"
-        @click="exampleNote"
-      >
-        <span class="icon_text">
-          <span class="material-symbols-outlined button_icon white"> egg </span>
+        </button>
+      </template>
+      <template v-if="viewText.length === 0 && isCreate">
+        <button type="button" class="btn-action-ghost" aria-label="Example Note button" @click="exampleNote">
+          <span class="material-symbols-outlined" aria-hidden="true">egg</span>
           Example
-        </span>
-      </v-btn>
-    </template>
-
-    <template v-if="noteLoaded && !isSplitScreen">
-      <v-btn
-        :size="btnSize"
-        rounded="xl"
-        mat-button
-        color="secondary"
-        aria-label="Toggle View button"
-        class="contained medium breadcrumb_edit_fab button_fab"
-        @click="toggleEditHandlerCallback"
-      >
-        <template v-if="isView">
-          <span class="icon_text">
-            <span class="material-symbols-outlined button_icon white"> visibility </span>
-            View
-          </span>
-        </template>
-
-        <template v-if="!isView">
-          <span class="icon_text">
-            <span class="material-symbols-outlined button_icon white"> edit </span>
+        </button>
+      </template>
+      <template v-if="!isSplitScreen">
+        <button type="button" class="btn-action-ghost" :aria-label="isView ? 'Switch to Edit' : 'Switch to View'"
+          @click="toggleEditHandlerCallback">
+          <template v-if="isView">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
             Edit
-          </span></template
-        >
-      </v-btn>
-    </template>
-
-    <template v-if="noteLoaded && !isMobile">
-      <v-btn
-        :size="btnSize"
-        rounded="xl"
-        mat-button
-        color="secondary"
-        aria-label="Toggle Split Screen button"
-        class="contained medium breadcrumb_edit_fab button_fab split_screen_button"
-        @click="toggleSplitHandlerCallback"
-      >
-        <template v-if="isSplitScreen">
-          <span className="split_screen_icon">
-            <img
-              src="/assets/images/split_screen_icon_single.png"
-              alt="split screen icon"
-              width="30"
-              height="30"
-            /> </span
-        ></template>
-
-        <template v-if="!isSplitScreen">
-          <span className="split_screen_icon">
-            <img
-              src="/assets/images/split_screen_icon_double.png"
-              alt="split screen icon"
-              width="30"
-              height="30"
-            /> </span
-        ></template>
-      </v-btn>
-    </template>
+          </template>
+          <template v-else>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            View
+          </template>
+        </button>
+      </template>
+      <template v-if="!isMobile">
+        <button type="button" class="btn-action-ghost" aria-label="Toggle split screen"
+          @click="toggleSplitHandlerCallback">
+          <template v-if="isSplitScreen">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="6" y="2" width="12" height="20" rx="2" />
+            </svg>
+          </template>
+          <template v-else>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="2" y="2" width="8" height="20" rx="2" />
+              <rect x="14" y="2" width="8" height="20" rx="2" />
+            </svg>
+          </template>
+          Split Screen
+        </button>
+      </template>
+    </div>
   </FooterView>
 </template>

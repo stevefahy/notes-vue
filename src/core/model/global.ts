@@ -64,6 +64,7 @@ export interface Notebook {
   notebook_cover: NotebookCoverType
   createdAt?: TDateISO | 'No date'
   updatedAt?: TDateISO | 'No date'
+  noteCount?: number
 }
 
 interface CreateNoteError {
@@ -178,6 +179,7 @@ export type NotebookAddEditMethod = 'edit' | 'create'
 export interface NotebookAddEdit {
   method: NotebookAddEditMethod
   notebook?: Notebook
+  open?: boolean
   onCancel: () => void
   addNotebook?: (notebook_name: string, notebook_cover: NotebookCoverType) => void
   editNotebook?: (
@@ -192,6 +194,8 @@ export interface NotebookAddEdit {
 
 export interface SelectNotebookFormProps {
   notebooks: Notebook[]
+  currentNotebookId: string | null
+  open?: boolean
   onCancel: () => void
   moveNotes: (notebook_id: string) => void
 }
@@ -241,7 +245,15 @@ export interface ProfileFormProps {
 
 export type PageType = 'notebooks' | 'notebook' | 'note' | 'profile' | 'other'
 
-export type NotebookCoverType = 'default' | 'red' | 'green' | 'blue'
+export type NotebookCoverType =
+  | 'default'
+  | 'red'
+  | 'green'
+  | 'blue'
+  | 'forest'
+  | 'emerald'
+  | 'lime'
+  | 'sage'
 
 export type NotebookType = {
   name: string

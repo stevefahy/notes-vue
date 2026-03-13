@@ -47,11 +47,11 @@ const errorClasses = errorClass.value
 }
 
 .error {
-  background-color: #690000;
+  background-color: var(--theme-danger-dark);
 }
 
 .success {
-  background-color: #1ad1b9;
+  background-color: var(--theme-green-snackbar);
 }
 
 .pending {

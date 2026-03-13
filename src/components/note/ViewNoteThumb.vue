@@ -33,10 +33,9 @@ watch(
 
 <template>
   <template v-if="!isLoaded">
-    <v-skeleton-loader type="list-item"></v-skeleton-loader>
-    <v-skeleton-loader type="list-item"></v-skeleton-loader>
+    <div class="loading-placeholder">Loading...</div>
   </template>
-  <template v-if="isLoaded">
+  <template v-else>
     <div class="box">
       <article class="viewnote_content viewnote_thumb">
         <template v-if="isLoaded">
@@ -74,5 +73,11 @@ watch(
 
 .box .row.footer {
   flex: 0 1 40px;
+}
+
+.loading-placeholder {
+  min-height: 40px;
+  color: var(--theme-text-muted);
+  font-size: 12px;
 }
 </style>

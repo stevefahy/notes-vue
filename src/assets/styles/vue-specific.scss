@@ -1,42 +1,17 @@
-.v-card--variant-elevated {
-  box-shadow:
-    #0003 0 3px 3px -2px,
-    #00000024 0 3px 4px,
-    #0000001f 0 1px 8px !important;
-}
-
+/* Vue-specific overrides — minimal set for remaining Vuetify usage */
 .v-card {
   padding-top: 16px !important;
   padding-bottom: 16px !important;
 }
 
-.v-btn {
-  text-transform: unset !important;
-}
-
-.v-btn.contained:hover {
-  text-decoration: none;
-  background-color: #7d0000 !important;
-}
-
-.basic {
-  color: var(--color-secondary) !important;
-}
-
-// Large
-
-.large {
-  font-size: 1.1rem !important;
-  font-weight: 500 !important;
-  line-height: 1.75 !important;
-  letter-spacing: 0.02857em !important;
-}
-
-.v-btn--variant-elevated {
-  box-shadow:
-    #0003 0 3px 5px -1px,
-    #00000024 0 6px 10px,
-    #0000001f 0 1px 18px !important;
+/* v-card-text used by ViewNote/EditNote — ensure padding when Vuetify styles not applied */
+.v-card-text {
+  padding: 13px 14px;
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0.0178571429em;
+  opacity: var(--v-card-text-opacity, 1);
+  text-transform: none;
 }
 
 .v-list-item__prepend > .v-badge ~ .v-list-item__spacer,
@@ -67,7 +42,15 @@
 }
 
 .button_icon {
-  margin-right: 8px;
+  margin-right: 6px;
+}
+
+.button_icon.danger {
+  color: var(--theme-danger-dark);
+}
+
+.button_icon.green {
+  color: var(--theme-green);
 }
 
 .icon_text {
@@ -75,65 +58,11 @@
   align-items: center;
 }
 
-.dialogue-title {
-  font-family: Roboto, Helvetica, Arial, sans-serif !important;
-  font-size: 1.25rem !important;
-  line-height: 1.6 !important;
-  letter-spacing: 0.0075em !important;
-}
-
-input,
-select,
-textarea {
-  background-color: #f7f0fa !important;
-  border-style: inset !important;
-}
-
-input {
-  font-size: 1rem !important;
-}
-
-select {
-  -moz-appearance: auto !important;
-  -webkit-appearance: auto !important;
-}
-
-.v-overlay__scrim {
-  opacity: 0.5 !important;
-}
-
-.notebooks_list:last-child {
-  padding-bottom: 15px;
-}
-
-.v-overlay__content.v-snackbar__wrapper.v-theme--myCustomLightTheme.v-snackbar--variant-elevated {
-  bottom: 60px !important;
-}
-
-.v-snackbar__content {
-  background-color: var(--color-success) !important;
-}
-
-.edit_icon_small .v-btn__content {
-  font-size: 0.8rem;
-}
-
-.v-btn--block {
-  display: flex;
-  flex: 0 0 auto !important;
-  min-width: unset !important;
-}
-
-.v-snackbar__wrapper {
-  width: 50%;
-  min-width: 150px !important;
-}
-
 .v-card--variant-elevated,
 .v-card--variant-flat {
   color: inherit !important;
 }
 
-.rounded-xl {
-  border-radius: 24px !important;
+.notebooks_list:last-child {
+  padding-bottom: 15px;
 }

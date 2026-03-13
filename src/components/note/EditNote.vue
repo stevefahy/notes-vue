@@ -35,17 +35,41 @@ const setText = (event: Event) => {
 <template>
   <div id="edit" :class="{
     'edit editnote_box': true,
-    'show editting': props.visible,
+    'view_split show': props.splitScreen,
+    'show editting': props.visible && !props.splitScreen,
     'show': !props.visible && props.splitScreen,
     'hide': !props.visible && !props.splitScreen
   }">
-    <v-card>
-      <v-card-text>
-        <article class="viewnote_content editor">
+    <div class="edit-note">
+      <div class="note-card">
+        <article class="v-card-text viewnote_content editor">
           <div ref="noteInputRef" :contentEditable="props.visible || props.splitScreen"
-            class="viewnote_content editable" @input="setText($event)" data-placeholder="Start writing...'"></div>
+            class="viewnote_content editable" @input="setText($event)" data-placeholder="Start writing..."></div>
         </article>
-      </v-card-text>
-    </v-card>
+      </div>
+    </div>
   </div>
 </template>
+
+<style scoped>
+/* Edit pane: content flows on edit background (var(--theme-edit-bg)), no white card */
+.note-card {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+/* Ensure edit content wraps like Svelte — min-width: 0 on flex chain, wrap on contenteditable */
+.edit-note {
+  min-width: 0;
+  width: 100%;
+}
+
+.viewnote_content.editable {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+}
+</style>

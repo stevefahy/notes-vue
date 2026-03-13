@@ -5,7 +5,10 @@ import type { ChangePassword, ChangePasswordObj } from '../model/global'
 const ENV = import.meta.env
 const AC = APPLICATION_CONSTANTS
 
-export const changePassword = async (token: string, passwordData: ChangePasswordObj): Promise<ChangePassword> => {
+export const changePassword = async (
+  token: string,
+  passwordData: ChangePasswordObj
+): Promise<ChangePassword> => {
   let response
   try {
     response = await fetch(ENV.VITE_API_ENDPOINT + `api/auth/change-password`, {
