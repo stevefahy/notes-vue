@@ -2,14 +2,19 @@
 import { ref } from 'vue'
 import type { GetNotebooks, IAuthContext } from '@/core/model/global'
 import { useAuthStore } from '@/stores/auth'
-import { useNotificationStore } from '@/stores/notification'
+import { useSnackStore } from '@/stores/snack'
 import { getNotebooks } from '@/core/helpers'
 import NotebooksList from '@/components/notebooks/NotebooksList.vue'
+import { normalizeErrorToString } from '@/core/lib/error-message-map'
+import APPLICATION_CONSTANTS from '@/core/application-constants/application-constants'
+
+const AC = APPLICATION_CONSTANTS
 
 const authStore = useAuthStore()
-const notificationStore = useNotificationStore()
+const snackStore = useSnackStore()
 
 const notebooksLoaded = ref<boolean>(false)
+const loadError = ref<boolean>(false)
 const userNotebooks = ref<GetNotebooks>({ success: false, notebooks: [] })
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -20,29 +25,27 @@ authStore.$subscribe((mutation, state) => {
   updateContext(state.authContext)
 })
 
-const showNotification = (msg: string) => {
-  notificationStore.ShowNotification({
-    notification: { n_status: 'error', title: 'Error!', message: msg }
-  })
-}
-
-// Get the Notebooks
 const loadNotebooks = async () => {
-  if (!notebooksLoaded.value && token) {
-    try {
-      const response = await getNotebooks(token)
-      if (response.error) {
-        showNotification(`${response.error}`)
-        return
-      }
-      if (response.success) {
-        userNotebooks.value = response
-        filterNotebooks()
-      }
-    } catch (err) {
-      showNotification(`${err}`)
+  if (!token) return
+  try {
+    const response = await getNotebooks(token)
+    if (response.error) {
+      snackStore.showErrorSnack(normalizeErrorToString(response.error), {
+        fromServer: (response as { fromServer?: boolean }).fromServer === true
+      })
+      notebooksLoaded.value = true
+      loadError.value = true
       return
     }
+    if (response.success) {
+      userNotebooks.value = response
+      filterNotebooks()
+    }
+  } catch (err) {
+    snackStore.showErrorSnack(normalizeErrorToString(err), { fromServer: false })
+    notebooksLoaded.value = true
+    loadError.value = true
+    return
   }
 }
 
@@ -50,15 +53,22 @@ const loadNotebooks = async () => {
 const filterNotebooks = async () => {
   const notebooks_found = userNotebooks.value.notebooks
   const error_found = userNotebooks.value.error
-  if (notebooks_found && notebooks_found.length > 0) {
-    // Set an old date for those notes without any updatedAt
+
+  if (!Array.isArray(notebooks_found)) {
+    notebooksLoaded.value = true
+    return
+  }
+  if (notebooks_found.length === 0) {
+    userNotebooks.value = { success: true, notebooks: [] }
+    notebooksLoaded.value = true
+    loadError.value = false
+  } else {
     notebooks_found.map((x) => {
       if (x.updatedAt === 'No date' || undefined) {
         x.updatedAt = 'December 17, 1995 03:24:00'
       }
       return x
     })
-    // Sort the notebooks by updatedAt
     notebooks_found
       .sort((a, b) => {
         if (a.updatedAt !== undefined && b.updatedAt !== undefined) {
@@ -70,9 +80,14 @@ const filterNotebooks = async () => {
       .reverse()
     userNotebooks.value = { success: true, notebooks: notebooks_found }
     notebooksLoaded.value = true
+    loadError.value = false
   }
+
   if (error_found) {
-    showNotification(error_found)
+    const fromServer = (userNotebooks.value as { fromServer?: boolean }).fromServer
+    snackStore.showErrorSnack(normalizeErrorToString(error_found), {
+      fromServer: fromServer === true
+    })
   }
 }
 
@@ -96,10 +111,14 @@ getAuth()
   <div v-if="!notebooksLoaded">
     <LoadingScreen />
   </div>
-  <div class="page_scrollable_header_breadcrumb_footer_list">
+  <div v-else-if="loadError" class="page_scrollable_header_breadcrumb_footer_list loading_routes error-state">
+    <p>Unable to load notebooks.</p>
+    <router-link class="back-link" :to="AC.DEFAULT_PAGE">Back to Notebooks</router-link>
+  </div>
+  <div v-else class="page_scrollable_header_breadcrumb_footer_list">
     <div v-if="notebooksLoaded && userNotebooks.notebooks">
-      <NotebooksList :error="userNotebooks.error" :success="userNotebooks.success"
-        :notebooks="userNotebooks.notebooks" />
+      <NotebooksList :error="userNotebooks.error" :success="userNotebooks.success" :notebooks="userNotebooks.notebooks"
+        :onNotebooksReload="loadNotebooks" />
     </div>
   </div>
 </template>

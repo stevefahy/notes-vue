@@ -14,6 +14,7 @@ const error = ref<AlertInterface>({ error_state: false, message: '' })
 const selectedCover = ref<NotebookCoverType>('forest')
 const selectedName = ref<string>('')
 const formChanged = ref<boolean>(false)
+const isSubmitting = ref(false)
 
 const covers = FolderOptions
 
@@ -85,11 +86,26 @@ const submitHandler = async (event: Event) => {
     const notebookId = props.notebook._id
     let updated = new Date().toISOString()
     if (props.notebook.updatedAt) updated = props.notebook.updatedAt
-    props.editNotebook(notebookId, notebook_name, notebook_cover, updated)
-    closeWithAnimation()
+    isSubmitting.value = true
+    try {
+      const ok = await props.editNotebook(
+        notebookId,
+        notebook_name,
+        notebook_cover,
+        updated
+      )
+      if (ok) closeWithAnimation()
+    } finally {
+      isSubmitting.value = false
+    }
   } else if (props.method === 'create' && props.addNotebook) {
-    props.addNotebook(notebook_name, notebook_cover)
-    closeWithAnimation()
+    isSubmitting.value = true
+    try {
+      const ok = await props.addNotebook(notebook_name, notebook_cover)
+      if (ok) closeWithAnimation()
+    } finally {
+      isSubmitting.value = false
+    }
   }
 }
 
@@ -115,6 +131,16 @@ const onAfterEnter = (el: Element) => {
 
 watch(() => props.open, (val) => {
   visible.value = val !== false
+  if (val) {
+    resetError()
+    if (props.method === 'edit' && props.notebook) {
+      selectedName.value = props.notebook.notebook_name
+      selectedCover.value = mapLegacyCover(props.notebook.notebook_cover) as NotebookCoverType
+    } else {
+      selectedName.value = ''
+      selectedCover.value = 'forest'
+    }
+  }
 })
 
 </script>
@@ -137,7 +163,7 @@ watch(() => props.open, (val) => {
             <div class="sheet-field">
               <label class="form-label" for="new-notebook">Name</label>
               <input id="new-notebook" v-model="selectedName" class="form-input" type="text"
-                placeholder="e.g. Personal, Work…" />
+                placeholder="e.g. Personal, Work…" :disabled="isSubmitting" />
             </div>
 
             <fieldset class="sheet-field sheet-fieldset">
@@ -146,7 +172,7 @@ watch(() => props.open, (val) => {
                 <button v-for="cover in covers" :key="cover.value" type="button"
                   :class="['swatch', `swatch-${cover.value}`, { selected: selectedCover === cover.value }]"
                   :aria-label="`${cover.viewValue} cover`" :aria-pressed="selectedCover === cover.value"
-                  @click="selectedCover = cover.value" />
+                  :disabled="isSubmitting" @click="selectedCover = cover.value" />
               </div>
             </fieldset>
           </form>
@@ -159,9 +185,17 @@ watch(() => props.open, (val) => {
             <button type="button" class="btn-cancel" aria-label="Cancel button" @click="cancelHandler">
               Cancel
             </button>
-            <button type="button" class="btn-create" :disabled="!formChanged"
+            <button type="button" class="btn-create" :disabled="!formChanged || isSubmitting"
               :aria-label="method === 'edit' ? 'Confirm edit button' : 'Create notebook button'" @click="submitHandler">
-              {{ method === 'edit' ? 'Confirm' : 'Create' }}
+              {{
+                isSubmitting
+                  ? method === 'edit'
+                    ? 'Saving…'
+                    : 'Creating…'
+                  : method === 'edit'
+                    ? 'Confirm'
+                    : 'Create'
+              }}
             </button>
           </div>
         </div>

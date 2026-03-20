@@ -1,56 +1,30 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import type { GetNotebooks, Notebook, IAuthContext, NotebookCoverType } from '@/core/model/global'
+import type { Notebook, NotebookCoverType } from '@/core/model/global'
 import { addNotebook } from '@/core/helpers'
 import { useAuthStore } from '@/stores/auth'
-import { useNotificationStore } from '@/stores/notification'
+import { normalizeErrorToString } from '@/core/lib/error-message-map'
+import { useSnackStore } from '@/stores/snack'
 import NotebookListItem from './NotebookListItem.vue'
 import FooterView from '../layout/FooterView.vue'
 import AddNotebookForm from './AddNotebookForm.vue'
 import { toLegacyCover } from '@/core/lib/folder-options'
 
-const props = defineProps<GetNotebooks>()
+const props = defineProps<{
+  error?: string
+  success?: boolean
+  notebooks?: Notebook[]
+  onNotebooksReload?: () => void | Promise<void>
+}>()
 
 const authStore = useAuthStore()
-const notificationStore = useNotificationStore()
+const snackStore = useSnackStore()
 
 const { authContext } = storeToRefs(authStore)
 
 const enableAddNotebook = ref<boolean>(false)
-const userNotebooks = ref<Notebook[] | []>([])
-const isLoaded = ref<boolean>(false)
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-let loading: boolean | null
-let token: string | null
-
-authStore.$subscribe((mutation, state) => {
-  updateContext(state.authContext)
-})
-
-const updateContext = (context: IAuthContext) => {
-  loading = context.loading
-  token = context.token
-  initUserNotebooks(props)
-}
-
-const initUserNotebooks = (notebooks: GetNotebooks) => {
-  if (notebooks && notebooks.success && notebooks.notebooks) {
-    const noteBooksArray = notebooks.notebooks
-    userNotebooks.value = noteBooksArray
-    isLoaded.value = true
-  }
-  if (notebooks && notebooks.error) {
-    showNotification(notebooks.error)
-  }
-}
-
-const showNotification = (msg: string) => {
-  notificationStore.ShowNotification({
-    notification: { n_status: 'error', title: 'Error!', message: msg }
-  })
-}
+const localNotebooks = computed<Notebook[]>(() => props.notebooks || [])
 
 const addNotebookFormHandler = () => {
   enableAddNotebook.value = true
@@ -60,48 +34,39 @@ const cancelHandler = () => {
   enableAddNotebook.value = false
 }
 
-const addNotebookHandler = async (notebook_name: string, notebook_cover: NotebookCoverType) => {
-  if (token) {
-    try {
-      const coverToSend = toLegacyCover(notebook_cover as Parameters<typeof toLegacyCover>[0])
-      const response = await addNotebook(token, notebook_name, coverToSend)
-      if (response.error) {
-        showNotification(`${response.error}`)
-        return
-      }
-      if (response.success) {
-        const prevNotebooks = userNotebooks.value
-        userNotebooks.value = [
-          {
-            _id: response.notebook._id,
-            notebook_name: response.notebook.notebook_name,
-            notebook_cover: response.notebook.notebook_cover,
-            updatedAt: response.notebook.updatedAt,
-            createdAt: response.notebook.createdAt
-          },
-          ...prevNotebooks
-        ]
-      }
-    } catch (err) {
-      showNotification(`${err}`)
-      return
+const addNotebookHandler = async (
+  notebook_name: string,
+  notebook_cover: NotebookCoverType
+): Promise<boolean> => {
+  const token = authContext.value.token
+  if (!token) return false
+  try {
+    const coverToSend = toLegacyCover(notebook_cover as Parameters<typeof toLegacyCover>[0])
+    const response = await addNotebook(token, notebook_name, coverToSend)
+    if (response.error) {
+      snackStore.showErrorSnack(normalizeErrorToString(response.error), {
+        fromServer: (response as { fromServer?: boolean }).fromServer === true
+      })
+      return false
     }
+    if (response.success) {
+      enableAddNotebook.value = false
+      await props.onNotebooksReload?.()
+      return true
+    }
+  } catch (err) {
+    snackStore.showErrorSnack(normalizeErrorToString(err), { fromServer: false })
+    return false
   }
-}
-
-if (authContext.value.success) {
-  updateContext(authContext.value)
+  return false
 }
 </script>
 
 <template>
-  <div v-if="!isLoaded">
-    <LoadingScreen />
-  </div>
-  <div v-if="userNotebooks" class="notebooks-list-wrap">
+  <div class="notebooks-list-wrap">
     <h2 class="page-heading">Your Notebooks</h2>
     <ul class="notebooks_list">
-      <template v-for="notebook of userNotebooks" :key="notebook._id">
+      <template v-for="notebook of localNotebooks" :key="notebook._id">
         <NotebookListItem :notebook_item="notebook" />
       </template>
     </ul>
@@ -110,7 +75,7 @@ if (authContext.value.success) {
       :onCancel="cancelHandler" />
   </div>
   <FooterView>
-    <div v-if="userNotebooks" class="fab-row">
+    <div v-if="localNotebooks" class="fab-row">
       <button type="button" class="fab" aria-label="Add notebook button" @click="addNotebookFormHandler">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M6 1v10M1 6h10" stroke="white" stroke-width="2" stroke-linecap="round" />

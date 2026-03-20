@@ -118,6 +118,18 @@ p {
   margin: 0 0 10px;
 }
 
+sup {
+  top: inherit;
+}
+
+sub,
+sup {
+  font-size: revert;
+  line-height: inherit;
+  vertical-align: super;
+  position: relative;
+}
+
 .notebook_cover_forest {
   color: var(--notebook-forest-color) !important;
 }
@@ -179,6 +191,7 @@ select {
 .viewnote_content {
   font-size: var(--size-095);
   line-height: 1.25rem;
+  letter-spacing: 0.0178571429em;
   border-radius: 6px;
   outline: 0px solid transparent;
 }
@@ -275,10 +288,6 @@ span.token {
 }
 
 @media only screen and (max-width: 380px) {
-  .material-symbols-outlined {
-    font-size: 20px;
-  }
-
   .button_icon {
     margin-right: 4px !important;
   }
@@ -683,6 +692,16 @@ pre[class*='language-'] {
   height: calc(
     var(--jsvh) - (var(--header-height) + var(--footer-height) + var(--breadcrumb-height)) * 1px
   );
+}
+
+.loading_routes.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+  text-align: center;
 }
 
 .main-navigation_header_container {

@@ -14,7 +14,7 @@ const token = computed(() => authStore.authContext.token ?? '')
 const handleChangeUsername = async (arg: { newUsername: string }) => {
   const result = await changeUsername(token.value, arg)
   if (result.error) {
-    throw new Error(result.error)
+    return { error: result.error, fromServer: (result as { fromServer?: boolean }).fromServer }
   }
   if (result.details) {
     authStore.authContext.details = result.details
@@ -27,7 +27,7 @@ const handleChangePassword = async (arg: {
 }) => {
   const result = await changePassword(token.value, arg)
   if (result.error) {
-    throw new Error(result.error)
+    return { error: result.error, fromServer: (result as { fromServer?: boolean }).fromServer }
   }
 }
 </script>
@@ -45,6 +45,7 @@ const handleChangePassword = async (arg: {
   display: flex;
   flex-direction: column;
   align-items: center;
+  text-align: center;
   padding: 0 16px;
 }
 </style>

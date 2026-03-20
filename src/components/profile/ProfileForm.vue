@@ -3,6 +3,10 @@ import { ref, computed } from 'vue'
 import type { ProfileFormProps } from '@/core/model/global'
 import APPLICATION_CONSTANTS from '@/core/application-constants/application-constants'
 import { useSnackStore } from '@/stores/snack'
+import {
+  normalizeErrorToString,
+  toUserFriendlyError
+} from '@/core/lib/error-message-map'
 
 const AC = APPLICATION_CONSTANTS
 
@@ -87,11 +91,17 @@ const handleChangeUsername = async (e: Event) => {
   isSubmitting.value = true
   usernameServerError.value = ''
   try {
-    await props.onChangeUsername({ newUsername: newUsername.value.trim() })
-    newUsername.value = ''
-    snackStore.ShowSnack({ n_status: true, message: 'User name changed!' })
+    const result = await props.onChangeUsername({ newUsername: newUsername.value.trim() })
+    if (result?.error) {
+      const rawMsg = normalizeErrorToString(result.error)
+      usernameServerError.value =
+        result.fromServer === true ? rawMsg : toUserFriendlyError(rawMsg)
+    } else {
+      newUsername.value = ''
+      snackStore.showSnack({ message: 'User name changed!' })
+    }
   } catch (err) {
-    usernameServerError.value = err instanceof Error ? err.message : 'Failed to update username'
+    usernameServerError.value = toUserFriendlyError(err)
   } finally {
     isSubmitting.value = false
   }
@@ -103,15 +113,21 @@ const handleChangePassword = async (e: Event) => {
   isSubmitting.value = true
   passwordServerError.value = ''
   try {
-    await props.onChangePassword({
+    const result = await props.onChangePassword({
       oldPassword: oldPassword.value,
       newPassword: newPassword.value
     })
-    oldPassword.value = ''
-    newPassword.value = ''
-    snackStore.ShowSnack({ n_status: true, message: 'Password updated' })
+    if (result?.error) {
+      const rawMsg = normalizeErrorToString(result.error)
+      passwordServerError.value =
+        result.fromServer === true ? rawMsg : toUserFriendlyError(rawMsg)
+    } else {
+      oldPassword.value = ''
+      newPassword.value = ''
+      snackStore.showSnack({ message: 'Password updated' })
+    }
   } catch (err) {
-    passwordServerError.value = err instanceof Error ? err.message : 'Failed to update password'
+    passwordServerError.value = toUserFriendlyError(err)
   } finally {
     isSubmitting.value = false
   }
@@ -149,7 +165,11 @@ const handleChangePassword = async (e: Event) => {
             </div>
             <div class="field-feedback">
               <div class="inline-error" :class="{ visible: !!(usernameServerError || usernameError) }">
-                {{ usernameServerError || usernameError }}
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                  <circle cx="6" cy="6" r="5.5" fill="#c0392b" />
+                  <path d="M6 3.5v3M6 8v.5" stroke="white" stroke-width="1.2" stroke-linecap="round" />
+                </svg>
+                <span>{{ usernameServerError || usernameError }}</span>
               </div>
               <span class="char-counter" :class="{ over: newUsername.length > AC.USERNAME_MAX }">
                 {{ newUsername.length }} / {{ AC.USERNAME_MAX }}
@@ -176,7 +196,11 @@ const handleChangePassword = async (e: Event) => {
             </div>
             <div class="field-feedback">
               <div class="inline-error" :class="{ visible: !!passwordServerError }">
-                {{ passwordServerError }}
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                  <circle cx="6" cy="6" r="5.5" fill="#c0392b" />
+                  <path d="M6 3.5v3M6 8v.5" stroke="white" stroke-width="1.2" stroke-linecap="round" />
+                </svg>
+                <span>{{ passwordServerError }}</span>
               </div>
             </div>
 
@@ -195,7 +219,11 @@ const handleChangePassword = async (e: Event) => {
             </div>
             <div class="field-feedback">
               <div class="inline-error" :class="{ visible: !!passwordError }">
-                {{ passwordError }}
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                  <circle cx="6" cy="6" r="5.5" fill="#c0392b" />
+                  <path d="M6 3.5v3M6 8v.5" stroke="white" stroke-width="1.2" stroke-linecap="round" />
+                </svg>
+                <span>{{ passwordError }}</span>
               </div>
             </div>
             <div class="btn-wrap">
@@ -322,15 +350,21 @@ const handleChangePassword = async (e: Event) => {
 }
 
 .field-feedback {
-  height: 20px;
+  min-height: 20px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 8px;
   margin-bottom: 8px;
   padding: 0 1px;
 }
 
 .inline-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
   font-size: 10.5px;
   color: var(--theme-danger-dark);
   opacity: 0;
@@ -341,10 +375,16 @@ const handleChangePassword = async (e: Event) => {
   opacity: 1;
 }
 
+.inline-error span {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  text-align: left;
+}
+
 .char-counter {
   font-size: 10px;
   color: var(--theme-text-muted);
-  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .char-counter.over {

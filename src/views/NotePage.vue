@@ -5,10 +5,10 @@ import { createNote, saveNote, getNote, getNotebook } from '@/core/helpers'
 import FooterView from '@/components/layout/FooterView.vue'
 import APPLICATION_CONSTANTS from '@/core/application-constants/application-constants'
 import { useNotebookEditStore } from '@/stores/notebookEdit'
-import { useNotificationStore } from '@/stores/notification'
 import { useSnackStore } from '@/stores/snack'
 import { useAuthStore } from '@/stores/auth'
 import type { IAuthContext } from '@/core/model/global'
+import { normalizeErrorToString } from '@/core/lib/error-message-map'
 import useWindowDimensions from '../core/lib/useWindowDimension'
 import { initScrollSync, removeScrollListeners } from '../core/lib/scroll_sync'
 import ViewNote from '../components/note/ViewNote.vue'
@@ -16,7 +16,6 @@ import EditNote from '@/components/note/EditNote.vue'
 
 const authStore = useAuthStore()
 const notebookEditStore = useNotebookEditStore()
-const notificationStore = useNotificationStore()
 const snackStore = useSnackStore()
 
 const AC = APPLICATION_CONSTANTS
@@ -26,7 +25,6 @@ const route = useRoute()
 const notebookId = route.params.notebookId
 const noteId = route.params.noteId
 
-let navigationUrl: string
 let token: string | null
 let new_note = false
 let width: number = useWindowDimensions().value.width
@@ -39,7 +37,7 @@ const originalText = ref<string>('')
 const updateEditTextProp = ref<string>('')
 const noteLoaded = ref<boolean>(false)
 const notebookLoaded = ref<boolean>(false)
-const autoSave = ref<boolean>(false)
+const pageLoadError = ref<boolean>(false)
 const isChanged = ref<boolean>(false)
 const isCreate = ref<boolean>(new_note)
 const isView = ref<boolean>(new_note)
@@ -51,14 +49,6 @@ windowDimensions.addListener()
 onUnmounted(() => {
   removeScrollListeners()
   windowDimensions.removeListener()
-})
-
-onBeforeRouteLeave((to, from, next) => {
-  navigationUrl = to.fullPath
-  if (isChanged.value && !isCreate.value) {
-    autoSave.value = true
-  }
-  next()
 })
 
 // Wait for the Markdown to load before initializing scroll sync
@@ -88,32 +78,14 @@ watch(windowDimensions, (newVal) => {
   dimensionsChange()
 })
 
-watch(autoSave, (newVal) => {
-  if (newVal) {
-    saveNoteCheck()
-  }
-})
+const showNoteSavedSnack = () => {
+  snackStore.showSnack({ message: 'Note Saved' })
+}
 
-watch(isChanged, (newVal) => {
-  if (newVal) {
-    saveNoteCheck()
-  }
-})
-
-watch(isView, (newVal) => {
-  if (newVal) {
-    saveNoteCheck()
-  }
-})
-
-watch(isCreate, (newVal) => {
-  if (newVal) {
-    saveNoteCheck()
-  }
-})
-
-const showSnack = () => {
-  snackStore.ShowSnack({ n_status: true, message: 'Note Saved' })
+const emitApiError = (err: unknown, fromServer?: boolean) => {
+  snackStore.showErrorSnack(normalizeErrorToString(err), {
+    fromServer: fromServer === true
+  })
 }
 
 const exampleNote = () => {
@@ -137,45 +109,58 @@ const updateIsChanged = (content: string) => {
   }
 }
 
+const persistNote = async (): Promise<boolean> => {
+  if (!token || !notebookId || !noteId || noteId === 'create-note') {
+    return false
+  }
+  try {
+    const response = await saveNote(
+      token,
+      notebookId as string,
+      noteId as string,
+      viewText.value
+    )
+    if (response.error) {
+      emitApiError(response.error, (response as { fromServer?: boolean }).fromServer)
+      return false
+    }
+    if (response.success) {
+      isChanged.value = false
+      originalText.value = viewText.value
+      return true
+    }
+  } catch (err) {
+    emitApiError(err, false)
+    return false
+  }
+  return false
+}
+
 // Create Note
 const createNotePost = async () => {
   if (token && notebookId && viewText.value) {
-    autoSave.value = false
     const note_obj = { notebookId: notebookId as string, note: viewText.value }
     try {
       const response = await createNote(token, note_obj)
       notebookLoaded.value = true
       if (response.error) {
-        showNotification(`${response.error}`)
+        emitApiError(response.error, (response as { fromServer?: boolean }).fromServer)
         return
       }
       if (response.success) {
         isCreate.value = false
         isChanged.value = false
-        autoSave.value = false
         router.push(`/notebook/${notebookId}`)
       }
     } catch (err) {
-      showNotification(`${err}`)
+      emitApiError(err, false)
       return
     }
   }
 }
 
-const saveNoteCheck = async () => {
-  if (autoSave.value && isChanged.value && (isView.value || isChanged.value) && !isCreate.value) {
-    const noteSaved = async () => {
-      await saveNoteCallback()
-      showSnack()
-      autoSave.value = false
-      isChanged.value = false
-      router.push(`${navigationUrl}`)
-    }
-    noteSaved()
-  }
-}
-
-const toggleEditHandlerCallback = () => {
+const toggleEditHandlerCallback = async () => {
+  if (isChanged.value) await persistNote()
   isView.value = !isView.value
 }
 
@@ -184,34 +169,24 @@ const toggleSplitHandlerCallback = () => {
 }
 
 const saveNoteCallback = async () => {
-  if (token && notebookId && noteId && viewText) {
-    let response
-    try {
-      response = await saveNote(token, notebookId as string, noteId as string, viewText.value)
-      if (response.error) {
-        showNotification(`${response.error}`)
-        return
-      }
-      if (response.success) {
-        isChanged.value = false
-        autoSave.value = false
-        originalText.value = viewText.value
-        showSnack()
-        // Change to View Mode
-        if (isView.value) {
-          toggleEditHandlerCallback()
-        }
-        return response
-      }
-    } catch (err) {
-      showNotification(`${err}`)
-      return
-    }
-  } else {
+  const ok = await persistNote()
+  if (!ok) return
+  showNoteSavedSnack()
+}
+
+onBeforeRouteLeave(async (_to, _from, next) => {
+  if (!isChanged.value || isCreate.value) {
+    next()
     return
   }
-  return
-}
+  const ok = await persistNote()
+  if (!ok) {
+    next(false)
+    return
+  }
+  showNoteSavedSnack()
+  next()
+})
 
 const loadMarkdown = async () => {
   await fetch(`/markdown/welcome_markdown_angular.md`)
@@ -234,7 +209,9 @@ const loadNote = async () => {
     try {
       const response = await getNote(token, notebookId as string, noteId as string)
       if (response.error) {
-        showNotification(`${response.error}`)
+        pageLoadError.value = true
+        noteLoaded.value = true
+        emitApiError(response.error, (response as { fromServer?: boolean }).fromServer)
         return
       }
       if (response.success) {
@@ -244,7 +221,9 @@ const loadNote = async () => {
         noteLoaded.value = true
       }
     } catch (err) {
-      showNotification(`${err}`)
+      pageLoadError.value = true
+      noteLoaded.value = true
+      emitApiError(err, false)
       return
     }
   } else {
@@ -259,14 +238,16 @@ const loadNotebook = async () => {
       const response = await getNotebook(token, notebookId as string)
       notebookLoaded.value = true
       if (response.error) {
-        showNotification(`${response.error}`)
+        pageLoadError.value = true
+        emitApiError(response.error, (response as { fromServer?: boolean }).fromServer)
         return
       }
       if (response.success) {
         notebookEditStore.edited = response.notebook
       }
     } catch (err) {
-      showNotification(`${err}`)
+      pageLoadError.value = true
+      emitApiError(err, false)
       notebookLoaded.value = true
       return
     }
@@ -275,12 +256,6 @@ const loadNotebook = async () => {
 
 const updateContext = (context: IAuthContext) => {
   token = context.token
-}
-
-const showNotification = (msg: string) => {
-  notificationStore.ShowNotification({
-    notification: { n_status: 'error', title: 'Error!', message: msg }
-  })
 }
 
 authStore.$subscribe((mutation, state) => {
@@ -302,11 +277,15 @@ getAuth()
 </script>
 
 <template>
-  <template v-if="!noteLoaded || token === null">
+  <div v-if="pageLoadError" class="page_scrollable_header_breadcrumb_footer loading_routes error-state">
+    <p>Unable to load content.</p>
+    <router-link class="back-link" :to="AC.DEFAULT_PAGE">Back to Notebooks</router-link>
+  </div>
+  <template v-else-if="!noteLoaded || token === null">
     <LoadingScreen />
   </template>
 
-  <div class="page_scrollable_header_breadcrumb_footer">
+  <div v-else class="page_scrollable_header_breadcrumb_footer">
     <template v-if="noteLoaded && token !== null">
       <div class="view_container" :class="{ editnote_box_split: isSplitScreen }" id="view_container">
         <EditNote :visible="!isView || isSplitScreen" :splitScreen="isSplitScreen" :loadedText="loadedText"

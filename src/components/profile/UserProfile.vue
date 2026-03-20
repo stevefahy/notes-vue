@@ -7,7 +7,7 @@ const props = defineProps<{
 }>()
 
 const initial = computed(() =>
-  props.details?.username?.charAt(0).toUpperCase() ?? '?'
+  props.details?.username?.charAt(0).toUpperCase()
 )
 </script>
 

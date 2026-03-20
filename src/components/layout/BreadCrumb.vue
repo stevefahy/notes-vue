@@ -19,27 +19,6 @@ const notebookLoaded = ref<boolean>(false)
 
 const route = useRoute()
 
-watch(route, (newValue) => {
-  if (newValue.name) {
-    setPageLayout(newValue.name.toString())
-  }
-})
-
-notebookEditStore.$subscribe((mutation, state) => {
-  const edited = state.edited
-  if (edited && edited.notebook_name !== null && edited._id !== null) {
-    if (edited && edited.notebook_cover) {
-      const displayCover = mapLegacyCover(edited.notebook_cover)
-      notebook.value = {
-        id: edited._id,
-        name: edited.notebook_name,
-        cover: displayCover as NotebookCoverType
-      }
-      notebookLoaded.value = true
-    }
-  }
-})
-
 const resetNotebook = () => {
   notebook.value = {
     id: '',
@@ -66,6 +45,27 @@ const setPageLayout = (url: string) => {
 const editNotebook = () => {
   notebookEditStore.editing = true
 }
+
+watch(route, (newValue) => {
+  if (newValue.name) {
+    setPageLayout(newValue.name.toString())
+  }
+}, { immediate: true })
+
+notebookEditStore.$subscribe((mutation, state) => {
+  const edited = state.edited
+  if (edited && edited.notebook_name !== null && edited._id !== null) {
+    if (edited && edited.notebook_cover) {
+      const displayCover = mapLegacyCover(edited.notebook_cover)
+      notebook.value = {
+        id: edited._id,
+        name: edited.notebook_name,
+        cover: displayCover as NotebookCoverType
+      }
+      notebookLoaded.value = true
+    }
+  }
+})
 </script>
 
 <template>

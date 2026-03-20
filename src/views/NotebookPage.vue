@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import type { Note, Notebook, SelectedNote, IAuthContext } from '@/core/model/global'
 import { useAuthStore } from '@/stores/auth'
-import { useNotificationStore } from '@/stores/notification'
+import { useSnackStore } from '@/stores/snack'
 import { useNotebookEditStore } from '@/stores/notebookEdit'
 import {
   getNotebook,
@@ -14,6 +14,7 @@ import {
   editNotebook,
   moveNotes
 } from '@/core/helpers'
+import { normalizeErrorToString } from '@/core/lib/error-message-map'
 import { useRouter, useRoute } from 'vue-router'
 import FooterView from '@/components/layout/FooterView.vue'
 import NoteList from '@/components/notebook/NoteList.vue'
@@ -21,11 +22,14 @@ import AddNotebookForm from '@/components/notebooks/AddNotebookForm.vue'
 import SelectNotebookForm from '@/components/notebooks/SelectNotebookForm.vue'
 import { useEditNotesStore } from '@/stores/editNotes'
 import { onUnmounted } from 'vue'
+import APPLICATION_CONSTANTS from '@/core/application-constants/application-constants'
+
+const AC = APPLICATION_CONSTANTS
 
 const editNotesStore = useEditNotesStore()
 
 const authStore = useAuthStore()
-const notificationStore = useNotificationStore()
+const snackStore = useSnackStore()
 const notebookEditStore = useNotebookEditStore()
 
 authStore.$subscribe((mutation, state) => {
@@ -51,6 +55,7 @@ const notes = ref<Note[] | null>(null)
 const notesLoadedDelay = ref(false)
 const notesLoaded = ref(false)
 const notebookLoaded = ref(false)
+const pageLoadError = ref(false)
 const notebooksLoaded = ref<boolean>(false)
 const notebook = ref<Notebook | null>(null)
 const userNotebooks = ref<Notebook[] | null>(null)
@@ -88,9 +93,9 @@ const updateContext = (context: IAuthContext) => {
   token = context.token
 }
 
-const showNotification = (msg: string) => {
-  notificationStore.ShowNotification({
-    notification: { n_status: 'error', title: 'Error!', message: msg }
+const emitApiError = (err: unknown, fromServer?: boolean) => {
+  snackStore.showErrorSnack(normalizeErrorToString(err), {
+    fromServer: fromServer === true
   })
 }
 
@@ -121,7 +126,8 @@ const loadNotes = async () => {
       const response = await getNotes(token, notebookId as string)
       notesLoaded.value = true
       if (response.error) {
-        showNotification(`${response.error}`)
+        pageLoadError.value = true
+        emitApiError(response.error, (response as { fromServer?: boolean }).fromServer)
         return
       }
       if (response.success) {
@@ -130,7 +136,8 @@ const loadNotes = async () => {
         notesLoadedDelay.value = true
       }
     } catch (err) {
-      showNotification(`${err}`)
+      pageLoadError.value = true
+      emitApiError(err, false)
       notesLoadedDelay.value = true
       return
     }
@@ -144,7 +151,8 @@ const loadNotebook = async () => {
       const response = await getNotebook(token, notebookId as string)
       notebookLoaded.value = true
       if (response.error) {
-        showNotification(`${response.error}`)
+        pageLoadError.value = true
+        emitApiError(response.error, (response as { fromServer?: boolean }).fromServer)
         return
       }
       if (response.success) {
@@ -152,7 +160,8 @@ const loadNotebook = async () => {
         notebookEditStore.edited = response.notebook
       }
     } catch (err) {
-      showNotification(`${err}`)
+      pageLoadError.value = true
+      emitApiError(err, false)
       notebookLoaded.value = true
       return
     }
@@ -166,14 +175,14 @@ const loadNotebooks = async () => {
       const response = await getNotebooks(token)
       notebooksLoaded.value = true
       if (response.error) {
-        showNotification(`${response.error}`)
+        emitApiError(response.error, (response as { fromServer?: boolean }).fromServer)
         return
       }
       if (response.success) {
         userNotebooks.value = response.notebooks
       }
     } catch (err) {
-      showNotification(`${err}`)
+      emitApiError(err, false)
       notebooksLoaded.value = true
       return
     }
@@ -248,7 +257,7 @@ const deleteNoteHandler = async () => {
       const response = await deleteNotes(token, notesSelected)
       notebookLoaded.value = true
       if (response.error) {
-        showNotification(`${response.error}`)
+        emitApiError(response.error, (response as { fromServer?: boolean }).fromServer)
         return
       }
       if (response.success) {
@@ -278,7 +287,7 @@ const deleteNoteHandler = async () => {
         cancelEditNoteFormHandler()
       }
     } catch (err) {
-      showNotification(`${err}`)
+      emitApiError(err, false)
       return
     }
   }
@@ -289,30 +298,34 @@ const editNotebookDateHandler = async (notebookID: string, notebookUpdated: stri
     try {
       const response = await editNotebookDate(token, notebookID, notebookUpdated)
       if (response.error) {
-        showNotification(`${response.error}`)
+        emitApiError(response.error, (response as { fromServer?: boolean }).fromServer)
         return
       }
     } catch (err) {
-      showNotification(`${err}`)
+      emitApiError(err, false)
       return
     }
   }
 }
 
 const deleteNotebookHandler = async () => {
+  if (!navigator.onLine) {
+    snackStore.showErrorSnack(AC.ERROR_NETWORK, { fromServer: false })
+    return
+  }
   const notebook_id = notebook.value!._id
   if (token && notebook_id && notebook_id.length > 0) {
     try {
       const response = await deleteNotebook(token, notebook_id)
       if (response.error) {
-        showNotification(`${response.error}`)
+        emitApiError(response.error, (response as { fromServer?: boolean }).fromServer)
         return
       }
       if (response.success) {
         router.push(`/notebooks`)
       }
     } catch (err) {
-      showNotification(`${err}`)
+      emitApiError(err, false)
       return
     }
   }
@@ -323,31 +336,34 @@ const editNotebookHandler = async (
   notebookName: string,
   notebookCover: string,
   notebookUpdated: string
-) => {
-  if (token && notebookID && notebookName && notebookCover && notebookUpdated) {
-    try {
-      const response = await editNotebook(
-        token,
-        notebookID,
-        notebookName,
-        notebookCover,
-        notebookUpdated
-      )
-      if (response.error) {
-        showNotification(`${response.error}`)
-        return
-      }
-      if (response.success) {
-        notebook.value = response.notebook_edited
-        enableEditNotebook.value = false
-        notebookEditStore.editing = false
-        notebookEditStore.edited = response.notebook_edited
-      }
-    } catch (err) {
-      showNotification(`${err}`)
-      return
-    }
+): Promise<boolean> => {
+  if (!token || !notebookID || !notebookName || !notebookCover || !notebookUpdated) {
+    return false
   }
+  try {
+    const response = await editNotebook(
+      token,
+      notebookID,
+      notebookName,
+      notebookCover,
+      notebookUpdated
+    )
+    if (response.error) {
+      emitApiError(response.error, (response as { fromServer?: boolean }).fromServer)
+      return false
+    }
+    if (response.success) {
+      notebook.value = response.notebook_edited
+      enableEditNotebook.value = false
+      notebookEditStore.editing = false
+      notebookEditStore.edited = response.notebook_edited
+      return true
+    }
+  } catch (err) {
+    emitApiError(err, false)
+    return false
+  }
+  return false
 }
 
 const getLatestUpdated = (selected: string[]) => {
@@ -378,7 +394,7 @@ const moveNoteHandler = async (notebookID: string) => {
     try {
       const response = await moveNotes(token, notebookID, notesSelected, latestUpdatedDate)
       if (response.error) {
-        showNotification(`${response.error}`)
+        emitApiError(response.error, (response as { fromServer?: boolean }).fromServer)
         return
       }
       if (response.success) {
@@ -408,7 +424,7 @@ const moveNoteHandler = async (notebookID: string) => {
         cancelEditNoteFormHandler()
       }
     } catch (err) {
-      showNotification(`${err}`)
+      emitApiError(err, false)
       return
     }
   }
@@ -426,11 +442,15 @@ getAuth()
 </script>
 
 <template>
-  <template v-if="!notebookLoaded || !notesLoaded">
+  <div v-if="pageLoadError" class="page_scrollable_header_breadcrumb_footer_list loading_routes error-state">
+    <p>Unable to load content.</p>
+    <router-link class="back-link" :to="AC.DEFAULT_PAGE">Back to Notebooks</router-link>
+  </div>
+  <template v-else-if="!notebookLoaded || !notesLoaded">
     <LoadingScreen />
   </template>
 
-  <div class="page_scrollable_header_breadcrumb_footer_list">
+  <div v-else class="page_scrollable_header_breadcrumb_footer_list">
     <template v-if="notebookLoaded && notesLoaded && notebook && notes">
       <template v-if="notesLoaded && notebook && notes !== null">
         <NoteList :notes="notes" :onNotesSelected="updateSelected" :onNotesEdit="editNotes"

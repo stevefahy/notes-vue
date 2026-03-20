@@ -1,12 +1,27 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import RouteLoadError from '../views/RouteLoadError.vue'
 
-const LoginPage = () => import('../views/LoginPage.vue')
-const ProfilePage = () => import('../views/ProfilePage.vue')
-const NotebooksPage = () => import('../views/NotebooksPage.vue')
-const NotebookPage = () => import('../views/NotebookPage.vue')
-const NotePage = () => import('../views/NotePage.vue')
-const NotFoundPage = () => import('../views/NotFoundPage.vue')
+/** Lazy route with cache + fallback, matching svelte-spa-router's wrap behavior. */
+const loadView = (loader: () => Promise<unknown>) => {
+  let cached: unknown = null
+  return () => {
+    if (cached) return Promise.resolve(cached)
+    return loader()
+      .then((mod) => {
+        cached = mod
+        return mod
+      })
+      .catch(() => ({ default: RouteLoadError }))
+  }
+}
+
+const LoginPage = loadView(() => import('../views/LoginPage.vue'))
+const ProfilePage = loadView(() => import('../views/ProfilePage.vue'))
+const NotebooksPage = loadView(() => import('../views/NotebooksPage.vue'))
+const NotebookPage = loadView(() => import('../views/NotebookPage.vue'))
+const NotePage = loadView(() => import('../views/NotePage.vue'))
+const NotFoundPage = loadView(() => import('../views/NotFoundPage.vue'))
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

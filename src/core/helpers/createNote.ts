@@ -1,4 +1,4 @@
-import { errString } from '../lib/errString'
+import { normalizeErrorToString, toUserFriendlyError } from '../lib/error-message-map'
 import APPLICATION_CONSTANTS from '../application-constants/application-constants'
 import type { CreateNoteObj, CreateNote } from '../model/global'
 
@@ -18,24 +18,36 @@ export const createNote = async (token: string, note: CreateNoteObj): Promise<Cr
       body: JSON.stringify(note)
     })
     if (response.status === 404) {
-      throw new Error(`${response.url} Not Found.`)
+      throw new Error(`404 Not Found: ${response.url}`)
+    }
+    if (!response.ok) {
+      try {
+        const errData = await response.json()
+        if (errData && errData.error != null)
+          return { error: normalizeErrorToString(errData.error), fromServer: true }
+      } catch {}
+      return {
+        error:
+          response.status >= 500
+            ? 'The server could not be reached. Please try again.'
+            : `${AC.NOTE_CREATE_ERROR}`,
+        fromServer: false
+      }
     }
   } catch (err: unknown) {
-    const errMessage = errString(err)
-    return { error: errMessage }
+    return { error: toUserFriendlyError(err), fromServer: false }
   }
   let data: CreateNote
   try {
     data = await response.json()
     if (data === null) {
-      return { error: `${AC.NOTE_CREATE_ERROR}` }
+      return { error: `${AC.NOTE_CREATE_ERROR}`, fromServer: false }
     }
   } catch (err: unknown) {
-    const errMessage = errString(err)
-    return { error: errMessage }
+    return { error: toUserFriendlyError(err), fromServer: false }
   }
-  if (data.error) {
-    return { error: data.error }
+  if ('error' in data && data.error) {
+    return { error: normalizeErrorToString(data.error), fromServer: true }
   }
   return data
 }

@@ -1,4 +1,4 @@
-import { errString } from '../lib/errString'
+import { normalizeErrorToString, toUserFriendlyError } from '../lib/error-message-map'
 import APPLICATION_CONSTANTS from '../application-constants/application-constants'
 import type { AuthSignup } from '../model/global'
 
@@ -22,27 +22,44 @@ export const signup = async (
       body: JSON.stringify({ username, email, password, framework })
     })
     if (response.status === 404) {
-      throw new Error(`${response.url} Not Found.`)
+      throw new Error(`404 Not Found: ${response.url}`)
     }
     if (response.status === 401) {
-      throw new Error(`Unauthorized`)
+      try {
+        const data = await response.json()
+        if (data && data.error != null)
+          return { error: normalizeErrorToString(data.error), fromServer: true }
+      } catch {}
+      return { error: `${AC.SIGNUP_GENERAL}`, fromServer: false }
+    }
+    if (!response.ok) {
+      try {
+        const errData = await response.json()
+        if (errData && errData.error != null)
+          return { error: normalizeErrorToString(errData.error), fromServer: true }
+      } catch {}
+      return {
+        error:
+          response.status >= 500
+            ? 'The server could not be reached. Please try again.'
+            : `${AC.SIGNUP_GENERAL}`,
+        fromServer: false
+      }
     }
   } catch (err: unknown) {
-    const errMessage = errString(err)
-    return { error: errMessage }
+    return { error: toUserFriendlyError(err), fromServer: false }
   }
   let data: AuthSignup
   try {
     data = await response.json()
     if (data === null || data === undefined) {
-      return { error: `${AC.SIGNUP_ERROR}` }
+      return { error: `${AC.SIGNUP_GENERAL}`, fromServer: false }
     }
   } catch (err: unknown) {
-    const errMessage = errString(err)
-    return { error: errMessage }
+    return { error: toUserFriendlyError(err), fromServer: false }
   }
   if (data.error) {
-    return { error: data.error }
+    return { error: normalizeErrorToString(data.error), fromServer: true }
   }
   return data
 }

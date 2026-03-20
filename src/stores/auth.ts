@@ -4,14 +4,14 @@ import { defineStore } from 'pinia'
 import type { AuthSignup, IAuthContext, AuthAuthenticate } from '@/core/model/global'
 import { signup, login, refreshtoken, logout } from '../core/helpers'
 import APPLICATION_CONSTANTS from '@/core/application-constants/application-constants'
-import { useRouter } from 'vue-router'
-import { useNotificationStore } from '@/stores/notification'
+import router from '@/router'
+import { useSnackStore } from '@/stores/snack'
+import { normalizeErrorToString, toUserFriendlyError } from '@/core/lib/error-message-map'
 
 const AC = APPLICATION_CONSTANTS
 
 export const useAuthStore = defineStore('auth', () => {
-  const router = useRouter()
-  const notificationStore = useNotificationStore()
+  const snackStore = useSnackStore()
 
   let interval: ReturnType<typeof setInterval>
   const AutoRefreshToken = () => {
@@ -33,12 +33,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   })
 
-  const showNotification = (msg: string) => {
-    notificationStore.ShowNotification({
-      notification: { n_status: 'error', title: 'Error!', message: msg }
-    })
-  }
-
   const resetAuthContext = () => {
     authContext.value = {
       ...authContext.value,
@@ -54,7 +48,9 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         const response = await logout(token)
         if (response.error) {
-          showNotification(`${response.error}`)
+          snackStore.showErrorSnack(normalizeErrorToString(response.error), {
+            fromServer: (response as { fromServer?: boolean }).fromServer
+          })
           return
         }
         if (response.success) {
@@ -64,7 +60,7 @@ export const useAuthStore = defineStore('auth', () => {
           router.push(`${AC.LOGIN_PAGE}`)
         }
       } catch (err) {
-        showNotification(`${err}`)
+        snackStore.showErrorSnack(normalizeErrorToString(err), { fromServer: false })
         return
       }
     }
@@ -182,7 +178,6 @@ export const useAuthStore = defineStore('auth', () => {
           return
         }
         if (response.error) {
-          showNotification(`${response.error}`)
           return response
         }
         if (response.success) {
@@ -197,8 +192,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
         return response
       } catch (err) {
-        showNotification(`${err}`)
-        return
+        return { error: toUserFriendlyError(err), fromServer: false }
       }
     } else {
       return
@@ -218,8 +212,10 @@ export const useAuthStore = defineStore('auth', () => {
           return { error: `${AC.GENERAL_ERROR}` }
         }
         if (response.error) {
-          showNotification(`${response.error}`)
-          return { error: `${response.error}` }
+          return {
+            error: normalizeErrorToString(response.error),
+            fromServer: (response as { fromServer?: boolean }).fromServer
+          }
         }
         if (response.success) {
           authContext.value = {
@@ -238,8 +234,7 @@ export const useAuthStore = defineStore('auth', () => {
           }
         }
       } catch (err) {
-        showNotification(`${err}`)
-        return { error: `${err}` }
+        return { error: toUserFriendlyError(err), fromServer: false }
       }
     } else {
       return { error: `${AC.GENERAL_ERROR}` }

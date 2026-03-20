@@ -69,6 +69,7 @@ export interface Notebook {
 
 interface CreateNoteError {
   error: string
+  fromServer?: boolean
   success?: never
   note?: never
 }
@@ -83,6 +84,7 @@ export type CreateNote = CreateNoteError | CreateNoteSuccess
 
 interface DeleteNotebookError {
   error: string
+  fromServer?: boolean
   success?: never
   notebook_deleted?: never
   server_response?: never
@@ -99,6 +101,7 @@ export type DeleteNotebook = DeleteNotebookError | DeleteNotebookSuccess
 
 interface EditNotebookDateError {
   error: string
+  fromServer?: boolean
   success?: never
   notebook_date_updated?: never
 }
@@ -114,6 +117,7 @@ export type EditNotebookDate = EditNotebookDateError | EditNotebookDateSuccess
 
 interface EditNotebookError {
   error: string
+  fromServer?: boolean
   success?: never
   notebook_edited?: never
 }
@@ -128,6 +132,7 @@ export type EditNotebook = EditNotebookError | EditNotebookSuccess
 
 interface GetNotebookError {
   error: string
+  fromServer?: boolean
   success?: never
   notebook?: never
 }
@@ -142,6 +147,7 @@ export type GetNotebook = GetNotebookError | GetNotebookSuccess
 
 export interface GetNotebooksError {
   error: string
+  fromServer?: boolean
   success?: never
   notebooks?: never
 }
@@ -181,13 +187,16 @@ export interface NotebookAddEdit {
   notebook?: Notebook
   open?: boolean
   onCancel: () => void
-  addNotebook?: (notebook_name: string, notebook_cover: NotebookCoverType) => void
+  addNotebook?: (
+    notebook_name: string,
+    notebook_cover: NotebookCoverType
+  ) => boolean | Promise<boolean>
   editNotebook?: (
     notebook_id: string,
     notebook_name: string,
     notebook_cover: NotebookCoverType,
     notebook_updated: string
-  ) => void
+  ) => boolean | Promise<boolean>
 }
 
 // SelectNotebookForm
@@ -236,8 +245,12 @@ export interface ChangePasswordObj {
 }
 
 export interface ProfileFormProps {
-  onChangePassword: (arg0: ChangePasswordObj) => void
-  onChangeUsername: (arg0: NewUsernameObj) => void
+  onChangePassword: (
+    arg0: ChangePasswordObj
+  ) => Promise<void | { error: string; fromServer?: boolean }>
+  onChangeUsername: (
+    arg0: NewUsernameObj
+  ) => Promise<void | { error: string; fromServer?: boolean }>
   userName: string | undefined
 }
 
@@ -269,9 +282,12 @@ export interface Edited {
 
 // Snackbar
 
+export type SnackVariant = 'success' | 'error' | 'warning'
+
 export interface Snack {
   n_status: boolean | null
   message: string | null
+  variant?: SnackVariant
 }
 
 export interface SnackbarProps {
@@ -290,6 +306,7 @@ interface DeleteNotesError {
   success?: never
   notes_deleted?: never
   error: string
+  fromServer?: boolean
 }
 
 interface DeleteNotesSuccess {
@@ -304,6 +321,7 @@ interface GetNoteError {
   success?: never
   note?: never
   error: string
+  fromServer?: boolean
 }
 
 interface GetNoteSuccess {
@@ -318,6 +336,7 @@ interface GetNotesError {
   success?: never
   notes?: never
   error: string
+  fromServer?: boolean
 }
 
 interface GetNotesSuccess {
@@ -333,6 +352,7 @@ interface MoveNotesError {
   notes_moved?: never
   server_response?: never
   error: string
+  fromServer?: boolean
 }
 
 interface MoveNotesSuccess {
@@ -348,6 +368,7 @@ interface SaveNoteError {
   success?: never
   server_response?: never
   error: string
+  fromServer?: boolean
 }
 
 interface SaveNoteSuccess {
@@ -361,6 +382,7 @@ export type SaveNote = SaveNoteError | SaveNoteSuccess
 interface ChangePasswordError {
   success?: never
   error: string
+  fromServer?: boolean
 }
 
 interface ChangePasswordSuccess {
@@ -374,6 +396,7 @@ interface ChangeUsernameError {
   success?: never
   details?: never
   error: string
+  fromServer?: boolean
 }
 
 interface ChangeUsernameSuccess {
@@ -387,6 +410,7 @@ export type ChangeUsername = ChangeUsernameError | ChangeUsernameSuccess
 interface LogoutError {
   success?: never
   error: string
+  fromServer?: boolean
 }
 
 interface LogoutSuccess {
@@ -435,6 +459,7 @@ interface AuthAuthenticateError {
   token?: never
   details?: never
   error: string
+  fromServer?: boolean
 }
 
 interface AuthAuthenticateSuccess {

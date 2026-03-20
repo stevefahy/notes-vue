@@ -1,4 +1,4 @@
-import { errString } from '../lib/errString'
+import { normalizeErrorToString, toUserFriendlyError } from '../lib/error-message-map'
 import APPLICATION_CONSTANTS from '../application-constants/application-constants'
 import type { SaveNote } from '../model/global'
 
@@ -20,6 +20,7 @@ export const saveNote = async (
   try {
     response = await fetch(ENV.VITE_API_ENDPOINT + `api/data/save-note`, {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
@@ -27,24 +28,36 @@ export const saveNote = async (
       body: JSON.stringify(note_obj)
     })
     if (response.status === 404) {
-      throw new Error(`${response.url} Not Found.`)
+      throw new Error(`404 Not Found: ${response.url}`)
+    }
+    if (!response.ok) {
+      try {
+        const errData = await response.json()
+        if (errData && errData.error != null)
+          return { error: normalizeErrorToString(errData.error), fromServer: true }
+      } catch {}
+      return {
+        error:
+          response.status >= 500
+            ? 'The server could not be reached. Please try again.'
+            : `${AC.NOTE_SAVE_ERROR}`,
+        fromServer: false
+      }
     }
   } catch (err: unknown) {
-    const errMessage = errString(err)
-    return { error: errMessage }
+    return { error: toUserFriendlyError(err), fromServer: false }
   }
   let data: SaveNote
   try {
     data = await response.json()
     if (data === null) {
-      return { error: `${AC.NOTE_SAVE_ERROR}` }
+      return { error: `${AC.NOTE_SAVE_ERROR}`, fromServer: false }
     }
   } catch (err: unknown) {
-    const errMessage = errString(err)
-    return { error: errMessage }
+    return { error: toUserFriendlyError(err), fromServer: false }
   }
-  if (data.error) {
-    return { error: data.error }
+  if ('error' in data && data.error) {
+    return { error: normalizeErrorToString(data.error), fromServer: true }
   }
   return data
 }
