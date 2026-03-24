@@ -189,7 +189,7 @@ onBeforeRouteLeave(async (_to, _from, next) => {
 })
 
 const loadMarkdown = async () => {
-  await fetch(`/markdown/welcome_markdown_angular.md`)
+  await fetch(`/markdown/welcome_markdown.md`)
     .then((response) => response.text())
     .then((text) => {
       WELCOME_NOTE.value = text

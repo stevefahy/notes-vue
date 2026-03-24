@@ -1,4 +1,16 @@
 const APPLICATION_CONSTANTS = {
+  // FRAMEWORK
+  FRAMEWORK: 'vue',
+
+  MOBILE_LAYOUT_WIDTH: 380,
+  SPLITSCREEN_MINIMUM_WIDTH: 500,
+  VIEWNOTE_PADDING: 69,
+  VIEWNOTE_PADDING_MOBILE: 52,
+  DEFAULT_PAGE: '/notebooks',
+  LOGIN_PAGE: `/login`,
+  REFRESH_TOKEN_INTERVAL: 5 * 60 * 1000,
+
+  // ERROR MESSAGES
   SIGNUP_INVALID_USERNAME: `At least 3 characters required`,
   SIGNUP_INVALID_PASSWORD: `At least 7 characters required`,
   SIGNUP_INVALID_EMAIL: `Please enter a valid email address.`,
@@ -50,15 +62,7 @@ const APPLICATION_CONSTANTS = {
   NOTE_CREATE_ERROR: `We couldn't create the note. Please try again.`,
   NOTES_DELETE_ERROR: `We couldn't delete the notes. Please try again.`,
   NOTE_SAVE_ERROR: `We couldn't save the note. Please try again.`,
-  NOTEBOOK_UPDATE_DATE_ERROR: `We couldn't update the notebook date. Please try again.`,
-
-  MOBILE_LAYOUT_WIDTH: 380,
-  SPLITSCREEN_MINIMUM_WIDTH: 500,
-  VIEWNOTE_PADDING: 69,
-  VIEWNOTE_PADDING_MOBILE: 52,
-  DEFAULT_PAGE: '/notebooks',
-  LOGIN_PAGE: `/login`,
-  REFRESH_TOKEN_INTERVAL: 5 * 60 * 1000
+  NOTEBOOK_UPDATE_DATE_ERROR: `We couldn't update the notebook date. Please try again.`
 }
 
 export default APPLICATION_CONSTANTS

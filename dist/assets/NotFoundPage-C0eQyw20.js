@@ -1,1 +1,0 @@
-import{_ as o}from"./index-CkZvVNi0.js";import"./vue-vendor-BZ1uTMWs.js";import"./vuetify-vendor-D8KnqFXO.js";const t={};function r(e,n){return"Page not found"}const f=o(t,[["render",r]]);export{f as default};
