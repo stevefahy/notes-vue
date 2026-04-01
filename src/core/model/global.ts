@@ -2,13 +2,9 @@
 export interface Global {}
 
 import type { TDateISO } from './date'
-import type {
-  DeleteResult,
-  InsertOneResult,
-  UpdateResult,
-  ObjectId,
-  BulkWriteResult
-} from 'mongodb'
+
+/** Server write acknowledgments (MongoDB-shaped JSON); client treats as opaque. */
+export type ApiWriteAck = Record<string, unknown>
 
 // Note Editor
 
@@ -77,7 +73,7 @@ interface CreateNoteError {
 interface CreateNoteSuccess {
   error?: never
   success: boolean
-  note: InsertOneResult<Document>
+  note: ApiWriteAck
 }
 
 export type CreateNote = CreateNoteError | CreateNoteSuccess
@@ -93,8 +89,8 @@ interface DeleteNotebookError {
 interface DeleteNotebookSuccess {
   error?: never
   success: boolean
-  notebook_deleted: ObjectId
-  server_response: UpdateResult<Document>
+  notebook_deleted: string
+  server_response: ApiWriteAck
 }
 
 export type DeleteNotebook = DeleteNotebookError | DeleteNotebookSuccess
@@ -109,8 +105,8 @@ interface EditNotebookDateError {
 interface EditNotebookDateSuccess {
   error?: never
   success: boolean
-  notebook_deleted: ObjectId
-  server_response: UpdateResult<Document>
+  notebook_deleted: string
+  server_response: ApiWriteAck
 }
 
 export type EditNotebookDate = EditNotebookDateError | EditNotebookDateSuccess
@@ -311,7 +307,7 @@ interface DeleteNotesError {
 
 interface DeleteNotesSuccess {
   success: boolean
-  notes_deleted: DeleteResult
+  notes_deleted: ApiWriteAck
   error?: never
 }
 
@@ -358,7 +354,7 @@ interface MoveNotesError {
 interface MoveNotesSuccess {
   success: boolean
   notes_moved: string[]
-  server_response: BulkWriteResult
+  server_response: ApiWriteAck
   error?: never
 }
 
@@ -373,7 +369,7 @@ interface SaveNoteError {
 
 interface SaveNoteSuccess {
   success: boolean
-  server_response: UpdateResult<Document>
+  server_response: ApiWriteAck
   error?: never
 }
 

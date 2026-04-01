@@ -1,63 +1,22 @@
-import { normalizeErrorToString, toUserFriendlyError } from '../lib/error-message-map'
+import { normalizeErrorToString } from '../lib/error-message-map'
+import { apiJsonFetch } from '../lib/apiFetch'
 import APPLICATION_CONSTANTS from '../application-constants/application-constants'
 import type { ChangePassword, ChangePasswordObj } from '../model/global'
 
-const ENV = import.meta.env
 const AC = APPLICATION_CONSTANTS
 
 export const changePassword = async (
   token: string,
   passwordData: ChangePasswordObj
 ): Promise<ChangePassword> => {
-  let response
-  try {
-    response = await fetch(ENV.VITE_API_ENDPOINT + `api/auth/change-password`, {
-      method: 'PATCH',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(passwordData)
-    })
-    if (response.status === 404) {
-      throw new Error(`404 Not Found: ${response.url}`)
-    }
-    if (response.status === 401) {
-      try {
-        const data = await response.json()
-        if (data && data.error != null)
-          return { error: normalizeErrorToString(data.error), fromServer: true }
-      } catch {}
-      return { error: 'Unauthorized', fromServer: false }
-    }
-    if (!response.ok) {
-      try {
-        const errData = await response.json()
-        if (errData && errData.error != null)
-          return { error: normalizeErrorToString(errData.error), fromServer: true }
-      } catch {}
-      return {
-        error:
-          response.status >= 500
-            ? 'The server could not be reached. Please try again.'
-            : `${AC.CHANGE_PASS_ERROR}`,
-        fromServer: false
-      }
-    }
-  } catch (err: unknown) {
-    return { error: toUserFriendlyError(err), fromServer: false }
-  }
-  let data: ChangePassword
-  try {
-    data = await response.json()
-    if (data === null) {
-      return { error: `${AC.CHANGE_PASS_ERROR}`, fromServer: false }
-    }
-  } catch (err: unknown) {
-    return { error: toUserFriendlyError(err), fromServer: false }
-  }
-  if ('error' in data && data.error) {
+  const data = await apiJsonFetch<ChangePassword>('api/auth/change-password', {
+    method: 'PATCH',
+    token,
+    body: passwordData,
+    genericError: AC.CHANGE_PASS_ERROR,
+    unauthorizedFallback: 'Unauthorized'
+  })
+  if (data && typeof data === 'object' && 'error' in data && data.error) {
     return { error: normalizeErrorToString(data.error), fromServer: true }
   }
   return data

@@ -7,6 +7,7 @@ import APPLICATION_CONSTANTS from '@/core/application-constants/application-cons
 import router from '@/router'
 import { useSnackStore } from '@/stores/snack'
 import { normalizeErrorToString, toUserFriendlyError } from '@/core/lib/error-message-map'
+import { isJwtExpired } from '@/core/lib/jwt'
 
 const AC = APPLICATION_CONSTANTS
 
@@ -71,16 +72,7 @@ export const useAuthStore = defineStore('auth', () => {
     clearInterval(interval)
   }
 
-  const isTokenExpired = (token: string) => {
-    if (!token || token.length <= 0) {
-      return true
-    }
-    const decode = JSON.parse(atob(token.split('.')[1]))
-    if (decode.exp * 1000 < new Date().getTime()) {
-      return true
-    }
-    return false
-  }
+  const isTokenExpired = (token: string | null | undefined) => isJwtExpired(token)
 
   const verifyRefreshToken = async () => {
     try {
@@ -254,14 +246,17 @@ export const useAuthStore = defineStore('auth', () => {
   })
 
   const getAuth = async () => {
-    if (!authContext.value.token) {
+    const t = authContext.value.token
+    if (!t || isTokenExpired(t)) {
       await verifyRefreshTokenWithRetry()
     }
     return authContext
   }
 
-  const authGuardVerify = async () => {
-    return !isTokenExpired(authContext.value.token!)
+  /** Synchronous: true when a non-expired access token is present (after getAuth refresh). */
+  const authGuardVerify = () => {
+    const t = authContext.value.token
+    return !!t && !isTokenExpired(t)
   }
 
   return { authContext, authGuardVerify, getAuth }

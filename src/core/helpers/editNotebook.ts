@@ -1,8 +1,8 @@
-import { normalizeErrorToString, toUserFriendlyError } from '../lib/error-message-map'
+import { normalizeErrorToString } from '../lib/error-message-map'
+import { apiJsonFetch } from '../lib/apiFetch'
 import APPLICATION_CONSTANTS from '../application-constants/application-constants'
 import type { EditNotebook } from '../model/global'
 
-const ENV = import.meta.env
 const AC = APPLICATION_CONSTANTS
 
 export const editNotebook = async (
@@ -12,53 +12,13 @@ export const editNotebook = async (
   notebookCover: string,
   notebookUpdated: string
 ): Promise<EditNotebook> => {
-  let response
-  const edit = {
-    notebookID,
-    notebookName,
-    notebookCover,
-    notebookUpdated
-  }
-  try {
-    response = await fetch(ENV.VITE_API_ENDPOINT + `api/data/edit-notebook`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(edit)
-    })
-    if (response.status === 404) {
-      throw new Error(`404 Not Found: ${response.url}`)
-    }
-    if (!response.ok) {
-      try {
-        const errData = await response.json()
-        if (errData && errData.error != null)
-          return { error: normalizeErrorToString(errData.error), fromServer: true }
-      } catch {}
-      return {
-        error:
-          response.status >= 500
-            ? 'The server could not be reached. Please try again.'
-            : `${AC.GENERAL_ERROR}`,
-        fromServer: false
-      }
-    }
-  } catch (err: unknown) {
-    return { error: toUserFriendlyError(err), fromServer: false }
-  }
-  let data: EditNotebook
-  try {
-    data = await response.json()
-    if (data === null) {
-      return { error: `${AC.GENERAL_ERROR}`, fromServer: false }
-    }
-  } catch (err: unknown) {
-    return { error: toUserFriendlyError(err), fromServer: false }
-  }
-  if ('error' in data && data.error) {
+  const data = await apiJsonFetch<EditNotebook>('api/data/edit-notebook', {
+    method: 'POST',
+    token,
+    body: { notebookID, notebookName, notebookCover, notebookUpdated },
+    genericError: AC.GENERAL_ERROR
+  })
+  if (data && typeof data === 'object' && 'error' in data && data.error) {
     return { error: normalizeErrorToString(data.error), fromServer: true }
   }
   return data

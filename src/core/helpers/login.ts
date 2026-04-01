@@ -1,59 +1,18 @@
-import { normalizeErrorToString, toUserFriendlyError } from '../lib/error-message-map'
+import { normalizeErrorToString } from '../lib/error-message-map'
+import { apiJsonFetch } from '../lib/apiFetch'
 import APPLICATION_CONSTANTS from '../application-constants/application-constants'
 import type { AuthAuthenticate } from '../model/global'
 
-const ENV = import.meta.env
 const AC = APPLICATION_CONSTANTS
 
 export const login = async (email: string, password: string): Promise<AuthAuthenticate> => {
-  let response
-  try {
-    response = await fetch(ENV.VITE_API_ENDPOINT + `api/auth/login`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ email, password })
-    })
-    if (response.status === 404) {
-      throw new Error(`404 Not Found: ${response.url}`)
-    }
-    if (response.status === 401) {
-      try {
-        const data = await response.json()
-        if (data && data.error != null)
-          return { error: normalizeErrorToString(data.error), fromServer: true }
-      } catch {}
-      return { error: AC.LOGIN_ERROR, fromServer: false }
-    }
-    if (!response.ok) {
-      try {
-        const errData = await response.json()
-        if (errData && errData.error != null)
-          return { error: normalizeErrorToString(errData.error), fromServer: true }
-      } catch {}
-      return {
-        error:
-          response.status >= 500
-            ? 'The server could not be reached. Please try again.'
-            : `${AC.LOGIN_ERROR}`,
-        fromServer: false
-      }
-    }
-  } catch (err: unknown) {
-    return { error: toUserFriendlyError(err), fromServer: false }
-  }
-  let data: AuthAuthenticate
-  try {
-    data = await response.json()
-    if (data === null || data === undefined) {
-      return { error: `${AC.LOGIN_ERROR}`, fromServer: false }
-    }
-  } catch (err: unknown) {
-    return { error: toUserFriendlyError(err), fromServer: false }
-  }
-  if ('error' in data && data.error) {
+  const data = await apiJsonFetch<AuthAuthenticate>('api/auth/login', {
+    method: 'POST',
+    body: { email, password },
+    genericError: AC.LOGIN_ERROR,
+    unauthorizedFallback: AC.LOGIN_ERROR
+  })
+  if (data && typeof data === 'object' && 'error' in data && data.error) {
     return { error: normalizeErrorToString(data.error), fromServer: true }
   }
   return data

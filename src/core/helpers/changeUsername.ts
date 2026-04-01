@@ -1,63 +1,22 @@
-import { normalizeErrorToString, toUserFriendlyError } from '../lib/error-message-map'
+import { normalizeErrorToString } from '../lib/error-message-map'
+import { apiJsonFetch } from '../lib/apiFetch'
 import APPLICATION_CONSTANTS from '../application-constants/application-constants'
 import type { ChangeUsername } from '../model/global'
 
-const ENV = import.meta.env
 const AC = APPLICATION_CONSTANTS
 
 export const changeUsername = async (
   token: string,
   usernameData: object
 ): Promise<ChangeUsername> => {
-  let response
-  try {
-    response = await fetch(ENV.VITE_API_ENDPOINT + `api/auth/change-username`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(usernameData)
-    })
-    if (response.status === 404) {
-      throw new Error(`404 Not Found: ${response.url}`)
-    }
-    if (response.status === 401) {
-      try {
-        const data = await response.json()
-        if (data && data.error != null)
-          return { error: normalizeErrorToString(data.error), fromServer: true }
-      } catch {}
-      return { error: 'Unauthorized', fromServer: false }
-    }
-    if (!response.ok) {
-      try {
-        const errData = await response.json()
-        if (errData && errData.error != null)
-          return { error: normalizeErrorToString(errData.error), fromServer: true }
-      } catch {}
-      return {
-        error:
-          response.status >= 500
-            ? 'The server could not be reached. Please try again.'
-            : `${AC.CHANGE_USER_ERROR}`,
-        fromServer: false
-      }
-    }
-  } catch (err: unknown) {
-    return { error: toUserFriendlyError(err), fromServer: false }
-  }
-  let data: ChangeUsername
-  try {
-    data = await response.json()
-    if (data === null) {
-      return { error: `${AC.CHANGE_USER_ERROR}`, fromServer: false }
-    }
-  } catch (err: unknown) {
-    return { error: toUserFriendlyError(err), fromServer: false }
-  }
-  if ('error' in data && data.error) {
+  const data = await apiJsonFetch<ChangeUsername>('api/auth/change-username', {
+    method: 'POST',
+    token,
+    body: usernameData,
+    genericError: AC.CHANGE_USER_ERROR,
+    unauthorizedFallback: 'Unauthorized'
+  })
+  if (data && typeof data === 'object' && 'error' in data && data.error) {
     return { error: normalizeErrorToString(data.error), fromServer: true }
   }
   return data

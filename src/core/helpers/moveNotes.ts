@@ -1,8 +1,8 @@
-import { normalizeErrorToString, toUserFriendlyError } from '../lib/error-message-map'
+import { normalizeErrorToString } from '../lib/error-message-map'
+import { apiJsonFetch } from '../lib/apiFetch'
 import APPLICATION_CONSTANTS from '../application-constants/application-constants'
 import type { MoveNotes } from '../model/global'
 
-const ENV = import.meta.env
 const AC = APPLICATION_CONSTANTS
 
 export const moveNotes = async (
@@ -11,52 +11,17 @@ export const moveNotes = async (
   notesSelected: string[],
   latestUpdatedDate: string | undefined
 ): Promise<MoveNotes> => {
-  let response
-  const move = {
-    notes: notesSelected,
-    notebookID: notebookId,
-    latestUpdatedNote: latestUpdatedDate
-  }
-  try {
-    response = await fetch(ENV.VITE_API_ENDPOINT + `api/data/move-notes`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(move)
-    })
-    if (response.status === 404) {
-      throw new Error(`404 Not Found: ${response.url}`)
-    }
-    if (!response.ok) {
-      try {
-        const errData = await response.json()
-        if (errData && errData.error != null)
-          return { error: normalizeErrorToString(errData.error), fromServer: true }
-      } catch {}
-      return {
-        error:
-          response.status >= 500
-            ? 'The server could not be reached. Please try again.'
-            : `${AC.NOTES_ERROR}`,
-        fromServer: false
-      }
-    }
-  } catch (err: unknown) {
-    return { error: toUserFriendlyError(err), fromServer: false }
-  }
-  let data: MoveNotes
-  try {
-    data = await response.json()
-    if (data === null) {
-      return { error: `${AC.NOTES_ERROR}`, fromServer: false }
-    }
-  } catch (err: unknown) {
-    return { error: toUserFriendlyError(err), fromServer: false }
-  }
-  if ('error' in data && data.error) {
+  const data = await apiJsonFetch<MoveNotes>('api/data/move-notes', {
+    method: 'POST',
+    token,
+    body: {
+      notes: notesSelected,
+      notebookID: notebookId,
+      latestUpdatedNote: latestUpdatedDate
+    },
+    genericError: AC.NOTES_ERROR
+  })
+  if (data && typeof data === 'object' && 'error' in data && data.error) {
     return { error: normalizeErrorToString(data.error), fromServer: true }
   }
   return data

@@ -1,58 +1,21 @@
-import { normalizeErrorToString, toUserFriendlyError } from '../lib/error-message-map'
+import { normalizeErrorToString } from '../lib/error-message-map'
+import { apiJsonFetch } from '../lib/apiFetch'
 import APPLICATION_CONSTANTS from '../application-constants/application-constants'
 import type { DeleteNotebook } from '../model/global'
 
-const ENV = import.meta.env
 const AC = APPLICATION_CONSTANTS
 
 export const deleteNotebook = async (
   token: string,
   notebook_id: string
 ): Promise<DeleteNotebook> => {
-  let response
-  try {
-    const deleteNotebook = {
-      notebookID: notebook_id
-    }
-    response = await fetch(ENV.VITE_API_ENDPOINT + `api/data/delete-notebook`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(deleteNotebook)
-    })
-    if (response.status === 404) {
-      throw new Error(`404 Not Found: ${response.url}`)
-    }
-    if (!response.ok) {
-      try {
-        const errData = await response.json()
-        if (errData && errData.error != null)
-          return { error: normalizeErrorToString(errData.error), fromServer: true }
-      } catch {}
-      return {
-        error:
-          response.status >= 500
-            ? 'The server could not be reached. Please try again.'
-            : `${AC.NOTEBOOK_DELETE_ERROR}`,
-        fromServer: false
-      }
-    }
-  } catch (err: unknown) {
-    return { error: toUserFriendlyError(err), fromServer: false }
-  }
-  let data: DeleteNotebook
-  try {
-    data = await response.json()
-    if (data === null) {
-      return { error: `${AC.NOTEBOOK_DELETE_ERROR}`, fromServer: false }
-    }
-  } catch (err: unknown) {
-    return { error: toUserFriendlyError(err), fromServer: false }
-  }
-  if ('error' in data && data.error) {
+  const data = await apiJsonFetch<DeleteNotebook>('api/data/delete-notebook', {
+    method: 'POST',
+    token,
+    body: { notebookID: notebook_id },
+    genericError: AC.NOTEBOOK_DELETE_ERROR
+  })
+  if (data && typeof data === 'object' && 'error' in data && data.error) {
     return { error: normalizeErrorToString(data.error), fromServer: true }
   }
   return data

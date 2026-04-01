@@ -12,11 +12,11 @@ const useWindowDimensions = (): Ref<WindowDimensions> => {
   const handleResize = (): void => {
     windowDimensions.value.width = window.innerWidth
     windowDimensions.value.height = window.innerHeight
+    const viewEl = document.querySelector('#viewnote_id')
     windowDimensions.value.viewnote_width =
-      document.querySelector('#viewnote_id') &&
-      document.querySelector('#viewnote_id')!.clientWidth < window.innerWidth
-        ? document.querySelector('#viewnote_id')!.clientWidth
-        : document.querySelector('#viewnote_id')
+      viewEl && viewEl.clientWidth < window.innerWidth
+        ? viewEl.clientWidth
+        : viewEl
           ? window.innerWidth - APPLICATION_CONSTANTS.VIEWNOTE_PADDING_MOBILE
           : window.innerWidth - APPLICATION_CONSTANTS.VIEWNOTE_PADDING
   }

@@ -20,8 +20,6 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
-    "@mdi/font": "^7.3.67",
-    "buffer": "^6.0.3",
     "date-fns": "^2.30.0",
     "front-matter": "^4.0.2",
     "markdown-it": "^14.1.1",
@@ -35,11 +33,9 @@
     "markdown-it-sub": "^1.0.0",
     "markdown-it-sup": "^1.0.0",
     "markdown-it-task-checkbox": "^1.0.6",
-    "mongodb": "^6.2.0",
     "morphdom": "^2.7.8",
     "pinia": "^2.1.7",
     "prismjs": "^1.30.0",
-    "stylelint": "^17.3.0",
     "vue": "^3.5.31",
     "vue-router": "^4.2.5",
     "vuetify": "^3.4.0-beta.0"
@@ -68,6 +64,7 @@
     "npm-run-all2": "^8.0.4",
     "prettier": "^3.4.0",
     "sass": "^1.69.5",
+    "stylelint": "^17.3.0",
     "typescript": "^5.5.4",
     "typescript-eslint": "^8.5.0",
     "unplugin-vue-components": "^31.0.0",
