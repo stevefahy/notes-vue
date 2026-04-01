@@ -53,7 +53,8 @@ const updateEditTextProp = ref<string>('')
 const noteLoaded = ref<boolean>(false)
 const notebookLoaded = ref<boolean>(false)
 const pageLoadError = ref<boolean>(false)
-const isChanged = ref<boolean>(false)
+/** Same as Svelte NotePage: dirty when current text differs from last saved/loaded baseline. */
+const isChanged = computed(() => viewText.value !== originalText.value)
 const isCreate = ref<boolean>(new_note)
 const isView = ref<boolean>(new_note)
 const isSplitScreen = ref<boolean>(false)
@@ -256,17 +257,8 @@ const exampleNote = () => {
 }
 
 const updatedViewTextHandler = (updatedViewText: string) => {
-  updateIsChanged(updatedViewText)
   viewText.value = updatedViewText
   updateEditTextProp.value = updatedViewText
-}
-
-const updateIsChanged = (content: string) => {
-  if (content !== originalText.value) {
-    isChanged.value = true
-  } else {
-    isChanged.value = false
-  }
 }
 
 const persistNote = async (): Promise<boolean> => {
@@ -285,7 +277,6 @@ const persistNote = async (): Promise<boolean> => {
       return false
     }
     if (response.success) {
-      isChanged.value = false
       originalText.value = viewText.value
       return true
     }
@@ -309,7 +300,6 @@ const createNotePost = async () => {
       }
       if (response.success) {
         isCreate.value = false
-        isChanged.value = false
         router.push(`/notebook/${notebookId}`)
       }
     } catch (err) {
@@ -319,8 +309,7 @@ const createNotePost = async () => {
   }
 }
 
-const toggleEditHandlerCallback = async () => {
-  if (isChanged.value) await persistNote()
+const toggleEditHandlerCallback = () => {
   isView.value = !isView.value
 }
 
@@ -338,10 +327,10 @@ useNoteShellSwipeNavigation(
   viewContainerRef,
   noteShellLayout,
   () => {
-    void toggleEditHandlerCallback()
+    toggleEditHandlerCallback()
   },
   () => {
-    void toggleEditHandlerCallback()
+    toggleEditHandlerCallback()
   }
 )
 
