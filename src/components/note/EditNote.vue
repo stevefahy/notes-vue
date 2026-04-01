@@ -33,26 +33,27 @@ const setText = (event: Event) => {
 </script>
 
 <template>
-  <div id="edit" :class="{
-    'edit editnote_box': true,
-    'view_split show': props.splitScreen,
-    'show editting': props.visible && !props.splitScreen,
-    'show': !props.visible && props.splitScreen,
-    'hide': !props.visible && !props.splitScreen
-  }">
-    <div class="edit-note">
-      <div class="note-card">
-        <article class="v-card-text viewnote_content editor">
-          <div ref="noteInputRef" :contentEditable="props.visible || props.splitScreen"
-            class="viewnote_content editable" @input="setText($event)" data-placeholder="Start writing..."></div>
-        </article>
+  <div id="edit" class="note-pane note-pane--edit edit editnote_box">
+    <div class="note-pane-scroll">
+      <div class="edit-note">
+        <div class="note-card">
+          <article class="v-card-text viewnote_content editor">
+            <div
+              ref="noteInputRef"
+              :contentEditable="props.visible || props.splitScreen"
+              class="viewnote_content editable"
+              role="textbox"
+              @input="setText($event)"
+              data-placeholder="Start writing..."
+            ></div>
+          </article>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* Edit pane: content flows on edit background (var(--theme-edit-bg)), no white card */
 .note-card {
   background: transparent;
   border: none;
@@ -61,7 +62,6 @@ const setText = (event: Event) => {
   padding: 0;
 }
 
-/* Ensure edit content wraps like Svelte — min-width: 0 on flex chain, wrap on contenteditable */
 .edit-note {
   min-width: 0;
   width: 100%;

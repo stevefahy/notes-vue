@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, watch, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { createNote, saveNote, getNote, getNotebook } from '@/core/helpers'
 import FooterView from '@/components/layout/FooterView.vue'
@@ -10,7 +10,22 @@ import { useAuthStore } from '@/stores/auth'
 import type { IAuthContext } from '@/core/model/global'
 import { normalizeErrorToString } from '@/core/lib/error-message-map'
 import useWindowDimensions from '../core/lib/useWindowDimension'
-import { initScrollSync, removeScrollListeners } from '../core/lib/scroll_sync'
+import {
+  alignNotePanesScroll,
+  captureSplitEnterScrollSnap,
+  detachScrollSyncListeners,
+  initScrollSync,
+  removeScrollSync,
+  stabilizeSplitEnterScroll
+} from '../core/lib/scroll_sync'
+import {
+  commitNoteShellTransition,
+  getNoteShellEditViewTransitionCleanupMs,
+  getNoteShellSplitTransitionCleanupMs
+} from '../core/lib/noteShellDom'
+import type { NoteShellLayout } from '../core/lib/noteShellDom'
+import type { SplitEnterScrollSnap } from '../core/lib/scroll_sync'
+import { useNoteShellSwipeNavigation } from '../core/lib/useNoteShellSwipeNavigation'
 import ViewNote from '../components/note/ViewNote.vue'
 import EditNote from '@/components/note/EditNote.vue'
 
@@ -43,18 +58,161 @@ const isCreate = ref<boolean>(new_note)
 const isView = ref<boolean>(new_note)
 const isSplitScreen = ref<boolean>(false)
 
+const viewContainerRef = ref<HTMLElement | null>(null)
+const noteShellLayout = computed<NoteShellLayout>(() =>
+  isSplitScreen.value ? 'split' : isView.value ? 'view' : 'edit'
+)
+
+const prevNoteShellLayoutRef = ref<NoteShellLayout | null>(null)
+const splitEnterFromRef = ref<'edit' | 'view' | null>(null)
+const splitEnterSnapRef = ref<SplitEnterScrollSnap | null>(null)
+const splitPostAlignTimeoutRef = ref<number | null>(null)
+const splitStabilizeCleanupRef = ref<(() => void) | null>(null)
+const prevIsSplitForScrollRef = ref(false)
+const prevNoteShellLayoutScrollRef = ref<NoteShellLayout | null>(null)
+let noteScrollEffectGeneration = 0
+
 const windowDimensions = useWindowDimensions().value
 windowDimensions.addListener()
 
 onUnmounted(() => {
-  removeScrollListeners()
+  removeScrollSync()
   windowDimensions.removeListener()
+  if (splitPostAlignTimeoutRef.value !== null) {
+    window.clearTimeout(splitPostAlignTimeoutRef.value)
+  }
+  splitStabilizeCleanupRef.value?.()
 })
 
 // Wait for the Markdown to load before initializing scroll sync
 setTimeout(() => {
   initScrollSync()
 }, 500)
+
+watch(
+  noteShellLayout,
+  () => {
+    const el = viewContainerRef.value
+    const prev = prevNoteShellLayoutRef.value
+    if (prev !== null && prev !== noteShellLayout.value) {
+      commitNoteShellTransition(el, prev, noteShellLayout.value)
+    }
+    prevNoteShellLayoutRef.value = noteShellLayout.value
+  },
+  { flush: 'post' }
+)
+
+watch(
+  [noteShellLayout, isSplitScreen],
+  () => {
+    const gen = ++noteScrollEffectGeneration
+
+    const prevLayout = prevNoteShellLayoutScrollRef.value
+    const editViewTransition =
+      prevLayout !== null &&
+      ((prevLayout === 'edit' && noteShellLayout.value === 'view') ||
+        (prevLayout === 'view' && noteShellLayout.value === 'edit'))
+
+    const wasSplit = prevIsSplitForScrollRef.value
+    const leavingSplit = wasSplit && !isSplitScreen.value
+    const enteringSplit = !wasSplit && isSplitScreen.value
+    prevIsSplitForScrollRef.value = isSplitScreen.value
+
+    if (leavingSplit || enteringSplit || editViewTransition) {
+      detachScrollSyncListeners()
+    }
+
+    if (splitPostAlignTimeoutRef.value !== null) {
+      window.clearTimeout(splitPostAlignTimeoutRef.value)
+      splitPostAlignTimeoutRef.value = null
+    }
+    splitStabilizeCleanupRef.value?.()
+    splitStabilizeCleanupRef.value = null
+
+    const splitFrom = splitEnterFromRef.value
+    const snapCaptured = splitEnterSnapRef.value
+
+    requestAnimationFrame(() => {
+      if (gen !== noteScrollEffectGeneration) return
+      requestAnimationFrame(() => {
+        if (gen !== noteScrollEffectGeneration) return
+
+        if (!isSplitScreen.value) {
+          if (leavingSplit) {
+            const exitSettleMs = getNoteShellSplitTransitionCleanupMs() + 120
+            splitPostAlignTimeoutRef.value = window.setTimeout(() => {
+              if (gen !== noteScrollEffectGeneration) return
+              splitPostAlignTimeoutRef.value = null
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  if (gen !== noteScrollEffectGeneration) return
+                  splitEnterFromRef.value = null
+                  initScrollSync()
+                })
+              })
+            }, exitSettleMs)
+            return
+          }
+          if (editViewTransition) {
+            const settleMs = getNoteShellEditViewTransitionCleanupMs() + 120
+            splitPostAlignTimeoutRef.value = window.setTimeout(() => {
+              if (gen !== noteScrollEffectGeneration) return
+              splitPostAlignTimeoutRef.value = null
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  if (gen !== noteScrollEffectGeneration) return
+                  alignNotePanesScroll(noteShellLayout.value, null)
+                  splitEnterFromRef.value = null
+                  initScrollSync()
+                })
+              })
+            }, settleMs)
+            return
+          }
+          alignNotePanesScroll(noteShellLayout.value, null)
+          splitEnterFromRef.value = null
+          initScrollSync()
+          return
+        }
+
+        const splitEnterWithOrigin = splitFrom !== null
+        if (splitEnterWithOrigin) {
+          splitEnterFromRef.value = null
+        }
+
+        if (splitEnterWithOrigin && snapCaptured) {
+          splitEnterSnapRef.value = null
+          const splitStabilizeMs = getNoteShellSplitTransitionCleanupMs() + 120
+          splitStabilizeCleanupRef.value = stabilizeSplitEnterScroll(
+            snapCaptured,
+            splitStabilizeMs,
+            () => {
+              if (gen !== noteScrollEffectGeneration) return
+              splitStabilizeCleanupRef.value = null
+              initScrollSync()
+            }
+          )
+          return
+        }
+
+        if (splitEnterWithOrigin) {
+          splitPostAlignTimeoutRef.value = window.setTimeout(() => {
+            if (gen !== noteScrollEffectGeneration) return
+            splitPostAlignTimeoutRef.value = null
+            alignNotePanesScroll('split', splitFrom)
+            initScrollSync()
+          }, getNoteShellSplitTransitionCleanupMs())
+          return
+        }
+
+        alignNotePanesScroll('split', null)
+        initScrollSync()
+      })
+    })
+    prevNoteShellLayoutScrollRef.value = noteShellLayout.value
+  },
+  { flush: 'post' }
+)
 
 if (noteId === 'create-note') {
   new_note = true
@@ -90,6 +248,8 @@ const emitApiError = (err: unknown, fromServer?: boolean) => {
 
 const exampleNote = () => {
   if (!isMobile.value) {
+    splitEnterSnapRef.value = captureSplitEnterScrollSnap(isView.value)
+    splitEnterFromRef.value = isView.value ? 'view' : 'edit'
     isSplitScreen.value = true
   }
   updatedViewTextHandler(WELCOME_NOTE.value)
@@ -165,8 +325,25 @@ const toggleEditHandlerCallback = async () => {
 }
 
 const toggleSplitHandlerCallback = () => {
+  if (!isSplitScreen.value) {
+    splitEnterSnapRef.value = captureSplitEnterScrollSnap(isView.value)
+    splitEnterFromRef.value = isView.value ? 'view' : 'edit'
+  } else {
+    splitEnterSnapRef.value = null
+  }
   isSplitScreen.value = !isSplitScreen.value
 }
+
+useNoteShellSwipeNavigation(
+  viewContainerRef,
+  noteShellLayout,
+  () => {
+    void toggleEditHandlerCallback()
+  },
+  () => {
+    void toggleEditHandlerCallback()
+  }
+)
 
 const saveNoteCallback = async () => {
   const ok = await persistNote()
@@ -287,7 +464,13 @@ getAuth()
 
   <div v-else class="page_scrollable_header_breadcrumb_footer">
     <template v-if="noteLoaded && token !== null">
-      <div class="view_container" :class="{ editnote_box_split: isSplitScreen }" id="view_container">
+      <div
+        ref="viewContainerRef"
+        class="view_container"
+        :class="{ editnote_box_split: isSplitScreen }"
+        id="view_container"
+        :data-note-layout="noteShellLayout"
+      >
         <EditNote :visible="!isView || isSplitScreen" :splitScreen="isSplitScreen" :loadedText="loadedText"
           :updateViewText="updatedViewTextHandler" :passUpdatedViewText="updateEditTextProp" />
         <ViewNote :visible="isView || isSplitScreen" :splitScreen="isSplitScreen" :viewText="viewText"
