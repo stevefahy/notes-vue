@@ -21,7 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (!authContext.value.success) {
         autoLogout()
       } else {
-        verifyRefreshToken()
+        void verifyRefreshTokenWithRetry()
       }
     }, AC.REFRESH_TOKEN_INTERVAL)
   }
@@ -73,31 +73,6 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const isTokenExpired = (token: string | null | undefined) => isJwtExpired(token)
-
-  const verifyRefreshToken = async () => {
-    try {
-      const response = await getRefreshToken()
-      if (response === null || response === undefined) {
-        resetAuthContext()
-        autoLogout()
-        return
-      }
-      if (response.success) {
-        authContext.value = {
-          ...authContext.value,
-          success: response.success,
-          details: response.details,
-          token: response.token,
-          loading: false
-        }
-      } else {
-        autoLogout()
-      }
-    } catch {
-      resetAuthContext()
-      autoLogout()
-    }
-  }
 
   const verifyRefreshTokenWithRetry = async (retries = 3) => {
     for (let i = 0; i < retries; i++) {
