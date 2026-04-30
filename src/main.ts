@@ -2,6 +2,7 @@ import { createApp, defineAsyncComponent } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
+import { useAuthStore } from './stores/auth'
 
 const LoadingScreen = defineAsyncComponent(() => import('./components/UI/LoadingScreen.vue'))
 const ErrorAlert = defineAsyncComponent(() => import('./components/UI/ErrorAlert.vue'))
@@ -45,9 +46,16 @@ const vuetify = createVuetify({
   }
 })
 
+const pinia = createPinia()
 const app = createApp(App)
 app.use(vuetify)
-app.use(createPinia())
+app.use(pinia)
 app.use(router)
 app.component('ErrorAlert', ErrorAlert).component('LoadingScreen', LoadingScreen)
-app.mount('#app')
+
+/** Restore session from HTTP-only refresh cookie before first paint (parity with React AuthProvider mount). */
+;(async () => {
+  await router.isReady()
+  await useAuthStore(pinia).getAuth()
+  app.mount('#app')
+})()

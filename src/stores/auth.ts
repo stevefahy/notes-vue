@@ -15,24 +15,6 @@ export const useAuthStore = defineStore('auth', () => {
   const snackStore = useSnackStore()
 
   let interval: ReturnType<typeof setInterval>
-  const AutoRefreshToken = () => {
-    interval = setInterval(() => {
-      if (document.visibilityState === 'hidden') return
-      if (!authContext.value.success) {
-        autoLogout()
-      } else {
-        void verifyRefreshTokenWithRetry()
-      }
-    }, AC.REFRESH_TOKEN_INTERVAL)
-  }
-
-  AutoRefreshToken()
-
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      setTimeout(() => verifyRefreshTokenWithRetry(), 500)
-    }
-  })
 
   const resetAuthContext = () => {
     authContext.value = {
@@ -72,33 +54,6 @@ export const useAuthStore = defineStore('auth', () => {
     clearInterval(interval)
   }
 
-  const isTokenExpired = (token: string | null | undefined) => isJwtExpired(token)
-
-  const verifyRefreshTokenWithRetry = async (retries = 3) => {
-    for (let i = 0; i < retries; i++) {
-      try {
-        const response = await getRefreshToken()
-        if (response?.success) {
-          authContext.value = {
-            ...authContext.value,
-            success: response.success,
-            details: response.details,
-            token: response.token,
-            loading: false
-          }
-          return
-        }
-      } catch {
-        /* retry on next iteration */
-      }
-      if (i < retries - 1) {
-        await new Promise((r) => setTimeout(r, 1000))
-      }
-    }
-    resetAuthContext()
-    autoLogout()
-  }
-
   let refreshInProgress: Promise<Awaited<ReturnType<typeof refreshtoken>> | undefined> | null = null
 
   const getRefreshToken = async () => {
@@ -128,6 +83,31 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       refreshInProgress = null
     }
+  }
+
+  const verifyRefreshTokenWithRetry = async (retries = 3) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const response = await getRefreshToken()
+        if (response?.success) {
+          authContext.value = {
+            ...authContext.value,
+            success: response.success,
+            details: response.details,
+            token: response.token,
+            loading: false
+          }
+          return
+        }
+      } catch {
+        /* retry on next iteration */
+      }
+      if (i < retries - 1) {
+        await new Promise((r) => setTimeout(r, 1000))
+      }
+    }
+    resetAuthContext()
+    autoLogout()
   }
 
   const handleLogout = async () => {
@@ -222,7 +202,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const getAuth = async () => {
     const t = authContext.value.token
-    if (!t || isTokenExpired(t)) {
+    if (!t || isJwtExpired(t)) {
       await verifyRefreshTokenWithRetry()
     }
     return authContext
@@ -231,8 +211,27 @@ export const useAuthStore = defineStore('auth', () => {
   /** Synchronous: true when a non-expired access token is present (after getAuth refresh). */
   const authGuardVerify = () => {
     const t = authContext.value.token
-    return !!t && !isTokenExpired(t)
+    return !!t && !isJwtExpired(t)
   }
+
+  const AutoRefreshToken = () => {
+    interval = setInterval(() => {
+      if (document.visibilityState === 'hidden') return
+      if (!authContext.value.success) {
+        autoLogout()
+      } else {
+        void verifyRefreshTokenWithRetry()
+      }
+    }, AC.REFRESH_TOKEN_INTERVAL)
+  }
+
+  AutoRefreshToken()
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      setTimeout(() => verifyRefreshTokenWithRetry(), 500)
+    }
+  })
 
   return { authContext, authGuardVerify, getAuth }
 })

@@ -1,0 +1,1 @@
+import{b as t,A as a,n}from"./index-C20yC1li.js";const i=a,c=async(o,e)=>{const r=await t(`api/data/notebook/${e}`,{method:"GET",token:o,genericError:i.NOTEBOOK_ERROR});return r&&typeof r=="object"&&"error"in r&&r.error?{error:n(r.error),fromServer:!0}:r};export{c as g};

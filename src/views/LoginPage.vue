@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import type { IAuthContext, onLoginT, onRegisterT } from '../core/model/global'
 import APPLICATION_CONSTANTS from '../core/application-constants/application-constants'
 import { useRouter, useRoute } from 'vue-router'
@@ -110,6 +110,12 @@ const getRedirectPath = () => {
   const redirect = route.query.redirect
   return typeof redirect === 'string' ? redirect : AC.DEFAULT_PAGE
 }
+
+onMounted(() => {
+  if (authStore.authGuardVerify()) {
+    void router.replace(getRedirectPath())
+  }
+})
 
 const switchAuthModeHandler = () => {
   fieldErrors.value = { username: '', email: '', password: '' }
