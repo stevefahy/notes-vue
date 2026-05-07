@@ -11,6 +11,15 @@ import { isJwtExpired } from '@/core/lib/jwt'
 
 const AC = APPLICATION_CONSTANTS
 
+/** Attempts for `/refreshtoken` after wake / flaky mobile radios (exponential backoff between tries). */
+const VERIFY_REFRESH_MAX_ATTEMPTS = 7
+const VERIFY_REFRESH_BACKOFF_MS_CAP = 4000
+
+function delayBeforeVerifyRetry(attemptIndex: number): number {
+  const ms = 250 * 2 ** attemptIndex
+  return Math.min(ms, VERIFY_REFRESH_BACKOFF_MS_CAP)
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const snackStore = useSnackStore()
 
@@ -85,7 +94,15 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  const verifyRefreshTokenWithRetry = async (retries = 3) => {
+  /**
+   * @param navigateOnFailure - When false (session bootstrap before `app.use(router)`), only reset auth.
+   * Avoids `router.push` / `clearInterval` before the app is mounted, and avoids a duplicate refresh after
+   * `beforeEach` already ran during `router.isReady()`.
+   */
+  const verifyRefreshTokenWithRetry = async (
+    retries = VERIFY_REFRESH_MAX_ATTEMPTS,
+    navigateOnFailure = true
+  ) => {
     for (let i = 0; i < retries; i++) {
       try {
         const response = await getRefreshToken()
@@ -103,11 +120,13 @@ export const useAuthStore = defineStore('auth', () => {
         /* retry on next iteration */
       }
       if (i < retries - 1) {
-        await new Promise((r) => setTimeout(r, 1000))
+        await new Promise((r) => setTimeout(r, delayBeforeVerifyRetry(i)))
       }
     }
     resetAuthContext()
-    autoLogout()
+    if (navigateOnFailure) {
+      autoLogout()
+    }
   }
 
   const handleLogout = async () => {
@@ -217,11 +236,7 @@ export const useAuthStore = defineStore('auth', () => {
   const AutoRefreshToken = () => {
     interval = setInterval(() => {
       if (document.visibilityState === 'hidden') return
-      if (!authContext.value.success) {
-        autoLogout()
-      } else {
-        void verifyRefreshTokenWithRetry()
-      }
+      void verifyRefreshTokenWithRetry()
     }, AC.REFRESH_TOKEN_INTERVAL)
   }
 
@@ -229,9 +244,17 @@ export const useAuthStore = defineStore('auth', () => {
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-      setTimeout(() => verifyRefreshTokenWithRetry(), 500)
+      setTimeout(() => void verifyRefreshTokenWithRetry(), 500)
     }
   })
 
-  return { authContext, authGuardVerify, getAuth }
+  const onPageShow = (event: Event) => {
+    const e = event as PageTransitionEvent
+    if (e.persisted) {
+      setTimeout(() => void verifyRefreshTokenWithRetry(), 500)
+    }
+  }
+  window.addEventListener('pageshow', onPageShow)
+
+  return { authContext, authGuardVerify, getAuth, verifyRefreshTokenWithRetry }
 })

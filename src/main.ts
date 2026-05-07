@@ -50,12 +50,16 @@ const pinia = createPinia()
 const app = createApp(App)
 app.use(vuetify)
 app.use(pinia)
-app.use(router)
 app.component('ErrorAlert', ErrorAlert).component('LoadingScreen', LoadingScreen)
 
-/** Restore session from HTTP-only refresh cookie before first paint (parity with React AuthProvider mount). */
+/**
+ * Refresh once before any navigation guard runs (avoids double `/refreshtoken` + cookie rotation races).
+ * `navigateOnFailure: false` — no `router.push` before `app.use(router)` / `mount`.
+ * Uses store default retry count (exponential backoff, tuned for mobile wake).
+ */
 ;(async () => {
+  await useAuthStore(pinia).verifyRefreshTokenWithRetry(undefined, false)
+  app.use(router)
   await router.isReady()
-  await useAuthStore(pinia).getAuth()
   app.mount('#app')
 })()
